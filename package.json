@@ -1,0 +1,51 @@
+{
+  "name": "murmur",
+  "productName": "Murmur",
+  "version": "0.1.0",
+  "description": "Push to talk dictation for Windows. Speak anywhere, Murmur types it.",
+  "main": "src/main/main.js",
+  "author": "Labroi Walton",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "icons": "node scripts/gen-icons.js",
+    "postinstall": "node scripts/gen-icons.js",
+    "dist": "electron-builder --win"
+  },
+  "dependencies": {
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.labroi.murmur",
+    "productName": "Murmur",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "Murmur-${version}-portable.exe"
+    }
+  }
+}

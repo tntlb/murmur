@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src blob:" />
+  <link rel="stylesheet" href="settings.css" />
+  <title>Murmur Settings</title>
+</head>
+<body>
+  <div class="titlebar"></div>
+
+  <div class="shell">
+    <aside class="side">
+      <div class="brand">
+        <div class="wordmark">Murmur</div>
+        <div class="brand-sub mono">PUSH TO TALK · WIN</div>
+      </div>
+      <nav id="nav">
+        <button class="nav-item active" data-tab="general">General</button>
+        <button class="nav-item" data-tab="voice">Voice &amp; model</button>
+        <button class="nav-item" data-tab="dictionary">Dictionary</button>
+        <button class="nav-item" data-tab="history">History</button>
+        <button class="nav-item" data-tab="about">About</button>
+      </nav>
+      <div class="side-foot">
+        <div class="mono" id="holdStatus">HOLD KEY · CHECKING</div>
+        <div class="mono" id="verLine">v0.0.0</div>
+      </div>
+    </aside>
+
+    <main id="main">
+
+      <!-- ============================================== General -->
+      <section class="panel active" data-panel="general">
+        <div class="eyebrow mono">INPUT</div>
+        <h1>General</h1>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Hold to talk</div>
+            <div class="row-desc">Hold the key, speak, release to insert. The Wispr Flow way.</div>
+          </div>
+          <div class="row-ctl">
+            <button class="keycap mono" id="holdKeyBtn">Right Ctrl</button>
+            <label class="switch"><input type="checkbox" id="holdEnabled" /><span></span></label>
+          </div>
+        </div>
+        <div class="row-note" id="holdUnavailable" hidden>
+          Hold to talk is unavailable on this machine (global key hook failed to load). The toggle shortcut below still works.
+        </div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Toggle shortcut</div>
+            <div class="row-desc">Press once to start, again to stop.</div>
+          </div>
+          <div class="row-ctl">
+            <button class="keycap mono" id="toggleBtn">Ctrl + Shift + Space</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Insertion method</div>
+            <div class="row-desc">Paste is instant. Type is slower but works in paste-hostile apps.</div>
+          </div>
+          <div class="row-ctl">
+            <select id="insertMethod">
+              <option value="paste">Paste (recommended)</option>
+              <option value="type">Type it out</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Restore clipboard</div>
+            <div class="row-desc">Put your previous clipboard text back after pasting.</div>
+          </div>
+          <div class="row-ctl">
+            <label class="switch"><input type="checkbox" id="restoreClipboard" /><span></span></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Audio cues</div>
+            <div class="row-desc">Soft blips on start, stop, and errors.</div>
+          </div>
+          <div class="row-ctl">
+            <label class="switch"><input type="checkbox" id="sounds" /><span></span></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Launch at login</div>
+            <div class="row-desc">Start Murmur in the tray when Windows starts.</div>
+          </div>
+          <div class="row-ctl">
+            <label class="switch"><input type="checkbox" id="launchAtLogin" /><span></span></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Max recording length</div>
+            <div class="row-desc">Recording stops itself after this long.</div>
+          </div>
+          <div class="row-ctl">
+            <select id="maxSeconds">
+              <option value="60">1 minute</option>
+              <option value="120">2 minutes</option>
+              <option value="300">5 minutes</option>
+              <option value="600">10 minutes</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== Voice & model -->
+      <section class="panel" data-panel="voice">
+        <div class="eyebrow mono">SIGNAL CHAIN</div>
+        <h1>Voice &amp; model</h1>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">API key</div>
+            <div class="row-desc">Free at console.groq.com. Stored only on this machine. <button class="link" data-href="https://console.groq.com/keys">Get a free key</button></div>
+          </div>
+          <div class="row-ctl grow">
+            <input type="password" id="apiKey" placeholder="gsk_..." spellcheck="false" />
+            <button class="btn" id="testBtn">Test</button>
+          </div>
+        </div>
+        <div class="row-note mono" id="testStatus" hidden></div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Microphone</div>
+            <div class="row-desc">Windows must allow desktop apps to use the microphone.</div>
+          </div>
+          <div class="row-ctl grow">
+            <select id="micSelect"><option value="default">System default</option></select>
+            <button class="btn" id="micTestBtn">Check level</button>
+          </div>
+        </div>
+        <div class="meter" id="meter" hidden><div class="meter-fill" id="meterFill"></div></div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Smart formatting</div>
+            <div class="row-desc">A fast LLM removes filler words and fixes punctuation. Falls back to the raw transcript on any hiccup.</div>
+          </div>
+          <div class="row-ctl">
+            <label class="switch"><input type="checkbox" id="smartFormat" /><span></span></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Language</div>
+            <div class="row-desc">Auto detects. Pinning one language is a touch faster and more accurate.</div>
+          </div>
+          <div class="row-ctl">
+            <select id="language">
+              <option value="auto">Auto detect</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="pt">Portuguese</option>
+              <option value="it">Italian</option>
+              <option value="nl">Dutch</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="zh">Chinese</option>
+              <option value="hi">Hindi</option>
+              <option value="ar">Arabic</option>
+              <option value="sv">Swedish</option>
+            </select>
+          </div>
+        </div>
+
+        <details class="advanced">
+          <summary class="mono">ADVANCED</summary>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Base URL</div>
+              <div class="row-desc">Any OpenAI-compatible endpoint. Point this at a local Whisper server to run free and offline.</div>
+            </div>
+            <div class="row-ctl grow">
+              <input type="text" id="baseUrl" class="mono-input" spellcheck="false" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Transcription model</div>
+              <div class="row-desc">whisper-large-v3-turbo is the best speed for the price on Groq.</div>
+            </div>
+            <div class="row-ctl grow">
+              <input type="text" id="model" class="mono-input" spellcheck="false" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Formatting model</div>
+              <div class="row-desc">Used only when Smart formatting is on.</div>
+            </div>
+            <div class="row-ctl grow">
+              <input type="text" id="formatModel" class="mono-input" spellcheck="false" />
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- ============================================== Dictionary -->
+      <section class="panel" data-panel="dictionary">
+        <div class="eyebrow mono">VOCABULARY</div>
+        <h1>Dictionary</h1>
+        <p class="lede">Names, brands, and acronyms the transcriber should always spell your way. These are hinted to Whisper and enforced by the formatter.</p>
+        <div class="dict-input-row">
+          <input type="text" id="dictInput" placeholder="Add a word or phrase, press Enter" spellcheck="false" />
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="empty" id="dictEmpty">Nothing yet. Try your name, your company, product names, coworker names.</div>
+      </section>
+
+      <!-- ============================================== History -->
+      <section class="panel" data-panel="history">
+        <div class="eyebrow mono">LOCAL ONLY</div>
+        <h1>History</h1>
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Save history</div>
+            <div class="row-desc">Keeps your last 200 dictations on this machine. Never uploaded anywhere.</div>
+          </div>
+          <div class="row-ctl">
+            <button class="btn subtle" id="clearHistory">Clear all</button>
+            <label class="switch"><input type="checkbox" id="historyEnabled" /><span></span></label>
+          </div>
+        </div>
+        <div id="historyList" class="history-list"></div>
+        <div class="empty" id="historyEmpty">No dictations yet. Hold your key and say something.</div>
+      </section>
+
+      <!-- ============================================== About -->
+      <section class="panel" data-panel="about">
+        <div class="eyebrow mono">MURMUR</div>
+        <h1>About</h1>
+        <p class="lede">Push to talk dictation for Windows. Hold a key anywhere, speak, release, and clean text lands at your cursor.</p>
+        <div class="about-grid">
+          <div class="about-card">
+            <div class="mono about-label">VERSION</div>
+            <div id="aboutVersion">0.0.0</div>
+          </div>
+          <div class="about-card">
+            <div class="mono about-label">DATA FOLDER</div>
+            <div id="aboutData" class="mono small-path">...</div>
+          </div>
+          <div class="about-card">
+            <div class="mono about-label">PRIVACY</div>
+            <div>Audio goes only to your configured API while you dictate. Keys and history never leave this machine.</div>
+          </div>
+          <div class="about-card">
+            <div class="mono about-label">COST</div>
+            <div>Groq's free tier covers normal daily dictation. Heavy use costs about four cents per hour of speech.</div>
+          </div>
+        </div>
+        <div class="about-links">
+          <button class="link" data-href="https://console.groq.com">Groq console</button>
+          <button class="link" data-href="https://console.groq.com/docs/speech-to-text">Groq speech docs</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ============================================== Onboarding -->
+  <div class="onboard" id="onboard" hidden>
+    <div class="onboard-card">
+      <div class="eyebrow mono">WELCOME</div>
+      <h2>Three steps and you're dictating</h2>
+      <ol class="steps">
+        <li>
+          <div class="step-title">Get a free Groq API key</div>
+          <div class="step-desc">Takes about a minute. <button class="link" data-href="https://console.groq.com/keys">Open console.groq.com</button>, create a key, paste it here.</div>
+          <div class="step-ctl">
+            <input type="password" id="obKey" placeholder="gsk_..." spellcheck="false" />
+            <button class="btn primary" id="obTest">Test</button>
+          </div>
+          <div class="row-note mono" id="obStatus" hidden></div>
+        </li>
+        <li>
+          <div class="step-title">Allow the microphone</div>
+          <div class="step-desc">Windows Settings, Privacy &amp; security, Microphone: turn on "Let desktop apps access your microphone".</div>
+        </li>
+        <li>
+          <div class="step-title">Try it</div>
+          <div class="step-desc">Click into any text field, then hold <span class="kbd mono" id="obHoldKey">Right Ctrl</span>, say hello, and release. Or press <span class="kbd mono" id="obToggle">Ctrl + Shift + Space</span>.</div>
+        </li>
+      </ol>
+      <div class="onboard-actions">
+        <button class="btn primary" id="obDone">Start using Murmur</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast mono" id="toast" hidden></div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

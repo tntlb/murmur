@@ -1,0 +1,167 @@
+/* Murmur overlay: a small studio meter that floats over your work.
+   Ink panel, signal amber for live audio, mono readouts. */
+
+:root {
+  --ink: #141318;
+  --ink-2: #1b1a20;
+  --hairline: #2e2c35;
+  --text: #ece9e4;
+  --muted: #8d8a94;
+  --amber: #f0a44b;
+  --red: #e5484d;
+  --green: #58b368;
+  --mono: "Cascadia Mono", Consolas, monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  background: transparent;
+  overflow: hidden;
+  height: 100%;
+  user-select: none;
+  cursor: default;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 10px;
+  font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 58px;
+  padding: 0 20px 0 16px;
+  border-radius: 29px;
+  background: linear-gradient(180deg, rgba(27, 26, 32, 0.97), rgba(17, 16, 20, 0.97));
+  border: 1px solid var(--hairline);
+  box-shadow:
+    0 14px 44px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 160ms ease-out, transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.pill[data-state="listening"],
+.pill[data-state="processing"],
+.pill[data-state="done"],
+.pill[data-state="error"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* status badge: red breathing dot, amber spinner, green check, red cross */
+.badge {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 10px rgba(229, 72, 77, 0.8);
+  animation: breathe 1.6s ease-in-out infinite;
+  display: none;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.72); opacity: 0.6; }
+}
+
+.badge::before {
+  /* processing spinner ring */
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 50%;
+  border: 2px solid rgba(240, 164, 75, 0.18);
+  border-top-color: var(--amber);
+  animation: spin 0.8s linear infinite;
+  display: none;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.check { color: var(--green); display: none; }
+.cross { color: var(--red); display: none; }
+
+.pill[data-state="listening"] .dot { display: block; }
+.pill[data-state="processing"] .badge::before { display: block; }
+.pill[data-state="done"] .check { display: block; }
+.pill[data-state="error"] .cross { display: block; }
+
+canvas {
+  width: 220px;
+  height: 36px;
+  flex: none;
+}
+
+.pill[data-state="error"] canvas { display: none; }
+
+.readout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 64px;
+}
+
+.pill[data-state="error"] .readout {
+  align-items: flex-start;
+  min-width: 0;
+  max-width: 290px;
+}
+
+.label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.value {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.pill[data-state="error"] .value {
+  white-space: normal;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #f2b8ba;
+}
+
+.hint {
+  margin-top: 7px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: rgba(141, 138, 148, 0.75);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+  opacity: 0;
+  transition: opacity 300ms ease 400ms;
+}
+
+.pill[data-state="listening"] ~ .hint { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pill { transition: opacity 120ms linear; transform: none; }
+  .dot { animation: none; }
+}

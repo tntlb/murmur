@@ -1,0 +1,254 @@
+'use strict';
+
+// The overlay owns the microphone: capture, waveform, and cues all live here
+// so the pill reflects the real signal, not a simulation of it.
+
+const pill = document.getElementById('pill');
+const label = document.getElementById('label');
+const value = document.getElementById('value');
+const canvas = document.getElementById('wave');
+const ctx = canvas.getContext('2d');
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const AMBER = [240, 164, 75];
+const BAR_COUNT = 44;
+const BAR_W = 3;
+const GAP = 2;
+
+let stream = null;
+let recorder = null;
+let chunks = [];
+let audioCtx = null;
+let analyser = null;
+let raf = 0;
+let bars = [];
+let startedAt = 0;
+let timerInterval = 0;
+let mode = 'idle'; // idle | live | processing
+let processT = 0;
+let soundsOn = true;
+
+// ---------------------------------------------------------------- audio cues
+
+function blip(kind) {
+  if (!soundsOn || reducedMotion) return;
+  try {
+    const ac = new AudioContext();
+    const notes = kind === 'start' ? [523.25, 783.99] : kind === 'stop' ? [783.99, 523.25] : [196, 174.61];
+    notes.forEach((freq, i) => {
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ac.currentTime + i * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.04, ac.currentTime + i * 0.07 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + i * 0.07 + 0.12);
+      osc.connect(gain).connect(ac.destination);
+      osc.start(ac.currentTime + i * 0.07);
+      osc.stop(ac.currentTime + i * 0.07 + 0.14);
+    });
+    setTimeout(() => ac.close(), 500);
+  } catch {}
+}
+
+// ---------------------------------------------------------------- waveform
+
+function resizeCanvas() {
+  const scale = devicePixelRatio || 1;
+  canvas.width = 220 * scale;
+  canvas.height = 36 * scale;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+}
+resizeCanvas();
+
+function draw() {
+  ctx.clearRect(0, 0, 220, 36);
+  const mid = 18;
+
+  if (mode === 'live' && analyser) {
+    const data = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v = (data[i] - 128) / 128;
+      sum += v * v;
+    }
+    const rms = Math.sqrt(sum / data.length);
+    bars.push(Math.min(1, rms * 3.2));
+    if (bars.length > BAR_COUNT) bars.shift();
+  } else if (mode === 'processing') {
+    // signal handed off: a low sine ripple sweeps while we wait for words
+    processT += 0.09;
+    bars = Array.from({ length: BAR_COUNT }, (_, i) =>
+      0.12 + 0.1 * Math.max(0, Math.sin(i * 0.55 - processT * 2.4))
+    );
+  }
+
+  const startX = 220 - bars.length * (BAR_W + GAP);
+  for (let i = 0; i < bars.length; i++) {
+    const amp = bars[i];
+    const h = Math.max(2.5, amp * 32);
+    const isNewest = mode === 'live' && i === bars.length - 1;
+    const alpha = mode === 'processing' ? 0.5 : 0.35 + amp * 0.65;
+    ctx.fillStyle = `rgba(${AMBER[0]}, ${AMBER[1]}, ${AMBER[2]}, ${isNewest ? 1 : alpha})`;
+    roundBar(startX + i * (BAR_W + GAP), mid - h / 2, BAR_W, h);
+  }
+  raf = requestAnimationFrame(draw);
+}
+
+function roundBar(x, y, w, h) {
+  const r = w / 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.fill();
+}
+
+function startDrawing() {
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(draw);
+}
+
+function stopDrawing() {
+  cancelAnimationFrame(raf);
+  raf = 0;
+}
+
+// ---------------------------------------------------------------- recording
+
+async function startCapture({ deviceId, sounds }) {
+  soundsOn = sounds !== false;
+  bars = [];
+  chunks = [];
+  mode = 'live';
+  try {
+    const audio = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    };
+    if (deviceId && deviceId !== 'default') audio.deviceId = { exact: deviceId };
+    stream = await navigator.mediaDevices.getUserMedia({ audio });
+  } catch (err) {
+    mode = 'idle';
+    window.murmur.recError(micErrorMessage(err));
+    return;
+  }
+  audioCtx = new AudioContext();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  audioCtx.createMediaStreamSource(stream).connect(analyser);
+
+  const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+  recorder = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 96000 });
+  recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  recorder.start(250);
+  startedAt = Date.now();
+  startTimer();
+  startDrawing();
+  blip('start');
+  window.murmur.recStarted();
+}
+
+function micErrorMessage(err) {
+  const name = err && err.name;
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    return 'Microphone blocked. Windows Settings, Privacy, Microphone: allow desktop apps.';
+  }
+  if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+    return 'Selected microphone not found. Pick another one in Settings.';
+  }
+  if (name === 'NotReadableError') {
+    return 'Microphone is busy in another app.';
+  }
+  return `Microphone error: ${err && err.message ? err.message : name || 'unknown'}`;
+}
+
+function stopCapture(discard) {
+  stopTimer();
+  const ms = Date.now() - startedAt;
+  if (!recorder || recorder.state === 'inactive') {
+    teardown();
+    return;
+  }
+  recorder.onstop = async () => {
+    if (!discard) {
+      mode = 'processing';
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const buf = await blob.arrayBuffer();
+      window.murmur.recData(buf, { ms });
+    }
+    teardown(discard);
+  };
+  recorder.stop();
+  blip('stop');
+}
+
+function teardown(fully = false) {
+  if (stream) {
+    stream.getTracks().forEach((t) => t.stop());
+    stream = null;
+  }
+  if (audioCtx) {
+    audioCtx.close().catch(() => {});
+    audioCtx = null;
+  }
+  analyser = null;
+  recorder = null;
+  chunks = [];
+  if (fully) {
+    mode = 'idle';
+    stopDrawing();
+  }
+}
+
+// ---------------------------------------------------------------- timer + ui
+
+function startTimer() {
+  value.textContent = '0:00';
+  timerInterval = setInterval(() => {
+    const sec = Math.floor((Date.now() - startedAt) / 1000);
+    value.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  }, 200);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+}
+
+window.murmur.on('rec-start', startCapture);
+window.murmur.on('rec-stop', () => stopCapture(false));
+window.murmur.on('rec-cancel', () => {
+  stopTimer();
+  stopCapture(true);
+  mode = 'idle';
+  stopDrawing();
+  pill.dataset.state = 'hidden';
+});
+
+window.murmur.on('state', ({ state, words, message }) => {
+  pill.dataset.state = state;
+  if (state === 'listening') {
+    label.textContent = 'LISTENING';
+  } else if (state === 'processing') {
+    label.textContent = 'TRANSCRIBING';
+    value.textContent = '...';
+    mode = 'processing';
+    startDrawing();
+  } else if (state === 'done') {
+    label.textContent = 'INSERTED';
+    value.textContent = `${words} ${words === 1 ? 'word' : 'words'}`;
+    mode = 'idle';
+    stopDrawing();
+    ctx.clearRect(0, 0, 220, 36);
+  } else if (state === 'error') {
+    label.textContent = 'ERROR';
+    value.textContent = message || 'Something went wrong';
+    mode = 'idle';
+    stopDrawing();
+    blip('error');
+  }
+});

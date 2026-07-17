@@ -1,0 +1,191 @@
+// Generates every icon Murmur needs (tray states, app icon, installer .ico)
+// from code, so the repo contains no binary assets and no image libraries.
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const zlib = require('zlib');
+
+const ROOT = path.join(__dirname, '..');
+const OUT = path.join(ROOT, 'assets', 'generated');
+const BUILD = path.join(ROOT, 'build');
+
+// ---------------------------------------------------------------- PNG writer
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function chunk(type, data) {
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length, 0);
+  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body), 0);
+  return Buffer.concat([len, body, crc]);
+}
+
+function encodePng(canvas) {
+  const { w, h, data } = canvas;
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0);
+  ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8;  // bit depth
+  ihdr[9] = 6;  // color type RGBA
+  const raw = Buffer.alloc((w * 4 + 1) * h);
+  for (let y = 0; y < h; y++) {
+    raw[y * (w * 4 + 1)] = 0; // filter: none
+    data.copy(raw, y * (w * 4 + 1) + 1, y * w * 4, (y + 1) * w * 4);
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+// ---------------------------------------------------------------- tiny canvas
+
+function makeCanvas(w, h) {
+  return { w, h, data: Buffer.alloc(w * h * 4, 0) };
+}
+
+function blendPx(c, x, y, [r, g, b, a]) {
+  if (x < 0 || y < 0 || x >= c.w || y >= c.h || a <= 0) return;
+  const i = (y * c.w + x) * 4;
+  const da = c.data[i + 3] / 255;
+  const sa = a / 255;
+  const oa = sa + da * (1 - sa);
+  if (oa <= 0) return;
+  c.data[i] = Math.round((r * sa + c.data[i] * da * (1 - sa)) / oa);
+  c.data[i + 1] = Math.round((g * sa + c.data[i + 1] * da * (1 - sa)) / oa);
+  c.data[i + 2] = Math.round((b * sa + c.data[i + 2] * da * (1 - sa)) / oa);
+  c.data[i + 3] = Math.round(oa * 255);
+}
+
+// Rounded rect with 1px antialiased edge, drawn by signed distance.
+function fillRoundedRect(c, rx, ry, rw, rh, radius, color) {
+  const r = Math.min(radius, rw / 2, rh / 2);
+  for (let y = Math.floor(ry) - 1; y <= Math.ceil(ry + rh) + 1; y++) {
+    for (let x = Math.floor(rx) - 1; x <= Math.ceil(rx + rw) + 1; x++) {
+      const px = x + 0.5, py = y + 0.5;
+      const dx = Math.max(rx + r - px, px - (rx + rw - r), 0);
+      const dy = Math.max(ry + r - py, py - (ry + rh - r), 0);
+      const dist = Math.sqrt(dx * dx + dy * dy) - r;
+      const inX = px >= rx && px <= rx + rw;
+      const inY = py >= ry && py <= ry + rh;
+      let cov;
+      if (!inX || !inY) cov = 0;
+      else cov = Math.max(0, Math.min(1, 0.5 - dist));
+      if (cov > 0) blendPx(c, x, y, [color[0], color[1], color[2], Math.round(color[3] * cov)]);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- the glyph
+
+// Murmur's mark: five waveform bars, the shape the overlay draws when you speak.
+const BAR_RATIOS = [0.34, 0.62, 1.0, 0.52, 0.28];
+
+function drawBars(c, cx, cy, unit, color) {
+  // unit: height of the tallest bar. Bar width and gap derive from it.
+  const bw = Math.max(2, Math.round(unit * 0.14));
+  const gap = Math.max(2, Math.round(bw * 0.9));
+  const totalW = BAR_RATIOS.length * bw + (BAR_RATIOS.length - 1) * gap;
+  let x = cx - totalW / 2;
+  for (const ratio of BAR_RATIOS) {
+    const bh = Math.max(bw, unit * ratio);
+    fillRoundedRect(c, x, cy - bh / 2, bw, bh, bw / 2, color);
+    x += bw + gap;
+  }
+}
+
+const INK = [23, 22, 27, 255];        // panel ink
+const AMBER = [240, 164, 75, 255];    // signal amber
+const WHITE = [236, 233, 228, 235];   // warm off-white for tray
+
+function trayIcon(size, color) {
+  const c = makeCanvas(size, size);
+  drawBars(c, size / 2, size / 2, size * 0.72, color);
+  return c;
+}
+
+function appIcon(size) {
+  const c = makeCanvas(size, size);
+  const pad = Math.round(size * 0.04);
+  fillRoundedRect(c, pad, pad, size - pad * 2, size - pad * 2, size * 0.22, INK);
+  // hairline inner edge, drawn as a slightly smaller translucent ring effect
+  fillRoundedRect(c, pad + 1, pad + 1, size - (pad + 1) * 2, size - (pad + 1) * 2, size * 0.21, [46, 44, 53, 60]);
+  fillRoundedRect(c, pad + 2, pad + 2, size - (pad + 2) * 2, size - (pad + 2) * 2, size * 0.205, INK);
+  drawBars(c, size / 2, size / 2, size * 0.5, AMBER);
+  return c;
+}
+
+// ---------------------------------------------------------------- ICO writer
+
+// Modern ICO: each entry is a PNG blob (valid since Windows Vista).
+function encodeIco(pngs) {
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0);
+  header.writeUInt16LE(1, 2); // type: icon
+  header.writeUInt16LE(pngs.length, 4);
+  const entries = [];
+  const blobs = [];
+  let offset = 6 + 16 * pngs.length;
+  for (const { size, buf } of pngs) {
+    const e = Buffer.alloc(16);
+    e[0] = size >= 256 ? 0 : size;
+    e[1] = size >= 256 ? 0 : size;
+    e.writeUInt16LE(1, 4);  // planes
+    e.writeUInt16LE(32, 6); // bit count
+    e.writeUInt32LE(buf.length, 8);
+    e.writeUInt32LE(offset, 12);
+    entries.push(e);
+    blobs.push(buf);
+    offset += buf.length;
+  }
+  return Buffer.concat([header, ...entries, ...blobs]);
+}
+
+// ---------------------------------------------------------------- main
+
+fs.mkdirSync(OUT, { recursive: true });
+fs.mkdirSync(BUILD, { recursive: true });
+
+const files = {
+  'tray-idle.png': encodePng(trayIcon(32, WHITE)),
+  'tray-rec.png': encodePng(trayIcon(32, AMBER)),
+  'icon-16.png': encodePng(appIcon(16)),
+  'icon-32.png': encodePng(appIcon(32)),
+  'icon-48.png': encodePng(appIcon(48)),
+  'icon-256.png': encodePng(appIcon(256)),
+};
+
+for (const [name, buf] of Object.entries(files)) {
+  fs.writeFileSync(path.join(OUT, name), buf);
+}
+
+fs.writeFileSync(
+  path.join(BUILD, 'icon.ico'),
+  encodeIco([
+    { size: 256, buf: files['icon-256.png'] },
+    { size: 48, buf: files['icon-48.png'] },
+    { size: 32, buf: files['icon-32.png'] },
+    { size: 16, buf: files['icon-16.png'] },
+  ])
+);
+
+console.log('icons written to assets/generated and build/icon.ico');

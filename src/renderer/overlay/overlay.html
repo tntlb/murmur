@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src blob:" />
+  <link rel="stylesheet" href="overlay.css" />
+  <title>Murmur</title>
+</head>
+<body>
+  <div class="pill" id="pill" data-state="hidden">
+    <div class="badge">
+      <span class="dot" id="dot"></span>
+      <svg class="check" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <svg class="cross" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+        <path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <canvas id="wave" width="440" height="72"></canvas>
+    <div class="readout">
+      <div class="label" id="label">LISTENING</div>
+      <div class="value" id="value">0:00</div>
+    </div>
+  </div>
+  <div class="hint" id="hint">esc to cancel</div>
+  <script src="overlay.js"></script>
+</body>
+</html>
