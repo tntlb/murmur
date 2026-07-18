@@ -113,8 +113,14 @@
               <option value="120">2 minutes</option>
               <option value="300">5 minutes</option>
               <option value="600">10 minutes</option>
+              <option value="1800">30 minutes</option>
+              <option value="3600">1 hour</option>
+              <option value="0">No limit</option>
             </select>
           </div>
+        </div>
+        <div class="row-note" id="noLimitWarning" hidden>
+          No limit keeps the microphone recording until you stop or cancel it, so don't walk away mid-dictation. Everything uploads as one file at the end; takes much past an hour can hit the API's 25 MB upload cap.
         </div>
       </section>
 

@@ -143,7 +143,9 @@ async function startCapture({ deviceId, sounds }) {
   audioCtx.createMediaStreamSource(stream).connect(analyser);
 
   const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-  recorder = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 96000 });
+  // 48 kbps opus is transparent for speech recognition and keeps even an
+  // hour-long take (~21 MB) under Groq's 25 MB free-tier upload cap.
+  recorder = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 48000 });
   recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
   recorder.start(250);
   startedAt = Date.now();

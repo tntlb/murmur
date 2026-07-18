@@ -39,6 +39,7 @@ function render() {
   $('sounds').checked = S.sounds;
   $('launchAtLogin').checked = S.launchAtLogin;
   $('maxSeconds').value = String(S.maxSeconds);
+  $('noLimitWarning').hidden = S.maxSeconds !== 0;
   if (document.activeElement !== $('apiKey')) $('apiKey').value = S.apiKey;
   if (document.activeElement !== $('baseUrl')) $('baseUrl').value = S.baseUrl;
   if ($('model').options.length) $('model').value = S.model;
