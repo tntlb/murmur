@@ -2,6 +2,8 @@
 
 Push-to-talk dictation for Windows. Hold a key in any app, speak, release, and clean formatted text lands at your cursor. It is a from-scratch Windows answer to Wispr Flow, built to share: clone it, install, paste a free API key, and you are dictating in under five minutes.
 
+Runs on Windows 10/11 today. A macOS port is planned in this same repo; until it lands, everything below is Windows.
+
 ## What it does
 
 - **Hold to talk**: hold Right Ctrl (rebindable), speak, release to insert. There is also a toggle shortcut (Ctrl + Shift + Space) for long dictations.
@@ -41,9 +43,29 @@ The key is stored only on your machine, in `%APPDATA%\murmur\settings.json`, and
 | Hold to talk | Hold **Right Ctrl**, release to insert |
 | Toggle recording | **Ctrl + Shift + Space** |
 | Cancel while recording | **Esc** |
+| Fix last dictation | Tray icon menu |
 | Settings / History | Tray icon menu |
 
-Both keys are rebindable in Settings, General.
+Both keys are rebindable in Settings, General. The hold key can be a single key or a chord: click the keycap, then press one key or hold a combo like Ctrl + Shift.
+
+The tray icon (white waveform bars, amber while recording) lives at the bottom-right of the taskbar next to the clock. Windows 11 hides it behind the **^** chevron by default; drag it out to pin it.
+
+## Teach it your words
+
+Two layers keep names, brands, and jargon spelled right:
+
+- **Dictionary** (Settings, Dictionary): add terms like your company or product names. They are hinted to Whisper and enforced by the formatter.
+- **Learned corrections**: when a dictation comes out wrong, tray, **Fix last dictation**, correct the text, save. That exact fix applies to every future dictation automatically. Fix the same thing twice and the term joins your dictionary on its own. Learned pairs are listed in the Dictionary tab, each deletable.
+
+## Every setting, briefly
+
+**General**: hold-to-talk key or chord; toggle shortcut; insertion method (Paste is instant, Type is slower but works in paste-hostile apps); restore clipboard after pasting; audio cues; launch at login; max recording length (1 minute to 1 hour, or No limit, which warns you because the mic stays hot and very long takes can hit the API's 25 MB upload cap).
+
+**Voice & model**: API key with a Test button; microphone picker with a live level check; transcription model dropdown with prices inline; Smart formatting toggle and its model dropdown; language pin; Base URL under Advanced for local or alternate endpoints.
+
+**Dictionary**: your terms plus everything Murmur has learned from your fixes.
+
+**History**: your last 200 dictations, local only, with Fix, Copy, Delete, Clear all, and an off switch.
 
 ## Costs, and how to run it free
 
@@ -68,6 +90,8 @@ Settings, Voice & model has dropdowns for both models, listing whatever your end
 - No analytics, no telemetry, no accounts.
 
 ## Troubleshooting
+
+**Can't find the app after launching**: it lives in the system tray, bottom-right by the clock, often hidden behind the **^** chevron on Windows 11. It is the white waveform bars icon.
 
 **"Microphone blocked"**: Windows Settings, Privacy & security, Microphone: turn on "Let desktop apps access your microphone".
 
@@ -103,4 +127,4 @@ An Electron tray app. The main process owns hotkeys (Electron `globalShortcut` f
 
 ## License
 
-MIT
+MIT. In plain terms: anyone may use, copy, modify, redistribute, and sell this software or products built on it, closed-source included, as long as the copyright notice and license text ride along. There is no warranty.
