@@ -7,9 +7,10 @@ let META = null; // { version, holdAvailable, userDataPath }
 
 // ---------------------------------------------------------------- helpers
 
-function toast(message, ms = 4500) {
+function toast(message, ms = 4500, kind = 'error') {
   const el = $('toast');
   el.textContent = message;
+  el.classList.toggle('ok', kind === 'ok');
   el.hidden = false;
   clearTimeout(toast._t);
   toast._t = setTimeout(() => { el.hidden = true; }, ms);
@@ -48,6 +49,7 @@ function render() {
   $('language').value = S.language;
   $('historyEnabled').checked = S.historyEnabled;
   renderChips();
+  renderCorrections();
 
   $('verLine').textContent = `v${META.version}`;
   $('aboutVersion').textContent = META.version;
@@ -351,6 +353,39 @@ $('dictInput').addEventListener('keydown', (e) => {
   e.target.value = '';
 });
 
+function renderCorrections() {
+  const wrap = $('corrList');
+  wrap.replaceChildren();
+  const list = S.corrections || [];
+  $('corrEmpty').hidden = list.length > 0;
+  for (const c of list) {
+    const row = document.createElement('div');
+    row.className = 'corr-row';
+    const from = document.createElement('span');
+    from.className = 'corr-from';
+    from.textContent = `"${c.from}"`;
+    const arrow = document.createElement('span');
+    arrow.className = 'corr-arrow';
+    arrow.textContent = '→';
+    const to = document.createElement('span');
+    to.className = 'corr-to';
+    to.textContent = `"${c.to}"`;
+    const count = document.createElement('span');
+    count.className = 'corr-count';
+    count.textContent = `x${c.count}`;
+    const del = document.createElement('button');
+    del.className = 'btn subtle';
+    del.textContent = '✕';
+    del.title = 'Forget this correction';
+    del.addEventListener('click', () => {
+      save({ corrections: (S.corrections || []).filter((x) => !(x.from === c.from && x.to === c.to)) })
+        .then(renderCorrections);
+    });
+    row.append(from, arrow, to, count, del);
+    wrap.appendChild(row);
+  }
+}
+
 // ---------------------------------------------------------------- history
 
 async function refreshHistory() {
@@ -371,6 +406,11 @@ async function refreshHistory() {
     meta.textContent = `${when.toLocaleDateString()} ${when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${item.words}w`;
     const actions = document.createElement('div');
     actions.className = 'h-actions';
+    const edit = document.createElement('button');
+    edit.className = 'btn edit-btn';
+    edit.textContent = 'Fix';
+    edit.title = 'Correct this transcript; Murmur learns from your fix';
+    edit.addEventListener('click', () => openEditor(row, item));
     const copy = document.createElement('button');
     copy.className = 'btn';
     copy.textContent = 'Copy';
@@ -387,11 +427,53 @@ async function refreshHistory() {
       await window.murmur.historyDelete(item.id);
       refreshHistory();
     });
-    actions.append(copy, del);
+    actions.append(edit, copy, del);
     row.append(text, meta, actions);
     list.appendChild(row);
   }
+  return items;
 }
+
+function openEditor(row, item) {
+  const editor = document.createElement('textarea');
+  editor.className = 'h-text-edit';
+  editor.value = item.text;
+  const actions = document.createElement('div');
+  actions.className = 'h-actions';
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn primary';
+  saveBtn.textContent = 'Save fix';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn subtle';
+  cancelBtn.textContent = 'Cancel';
+  saveBtn.addEventListener('click', async () => {
+    const fixed = editor.value.trim();
+    if (fixed && fixed !== item.text) {
+      const res = await window.murmur.historyUpdate(item.id, fixed);
+      if (res.learned.length) {
+        let msg = 'Learned: ' + res.learned.map((p) => `"${p.from}" → "${p.to}"`).join(', ');
+        if (res.promoted.length) msg += `. Added to dictionary: ${res.promoted.join(', ')}`;
+        toast(msg, 6000, 'ok');
+      }
+    }
+    refreshHistory();
+  });
+  cancelBtn.addEventListener('click', refreshHistory);
+  editor.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveBtn.click(); }
+    if (e.key === 'Escape') refreshHistory();
+  });
+  actions.append(saveBtn, cancelBtn);
+  row.replaceChildren(editor, actions);
+  editor.focus();
+}
+
+window.murmur.on('edit-latest', async () => {
+  gotoTab('history');
+  await refreshHistory();
+  const first = $('historyList').querySelector('.edit-btn');
+  if (first) first.click();
+});
 
 $('clearHistory').addEventListener('click', async () => {
   await window.murmur.historyClear();

@@ -9,6 +9,7 @@ Push-to-talk dictation for Windows. Hold a key in any app, speak, release, and c
 - **Live overlay**: a small floating meter shows your real waveform, a timer, and the result (word count or a readable error), then gets out of the way.
 - **Smart formatting**: a fast LLM strips filler words, fixes punctuation and casing, and honors spoken commands like "new paragraph". It fails open: if formatting hiccups, you still get the raw transcript.
 - **Custom dictionary**: names, brands, and acronyms spelled your way, hinted to Whisper and enforced by the formatter.
+- **Learns from your fixes**: correct a transcript once (tray, Fix last dictation) and that exact fix applies to every future dictation; fix the same thing twice and the term joins your dictionary automatically.
 - **Local history**: your last 200 dictations, stored only on your machine, with copy and delete.
 - **Low cost by design**: Groq's free tier covers normal daily use. Heavy use costs about $0.04 per hour of speech. A local Whisper server drops in for $0.
 

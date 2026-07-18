@@ -73,6 +73,10 @@ async function smartFormat(text, s) {
     if (Array.isArray(s.dictionary) && s.dictionary.length) {
       system += `\n- Correct misspellings of these known terms to exactly this spelling: ${s.dictionary.join(', ')}.`;
     }
+    if (Array.isArray(s.corrections) && s.corrections.length) {
+      const top = s.corrections.slice().sort((a, b) => b.count - a.count).slice(0, 20);
+      system += `\n- The user has corrected these transcription mistakes before, apply the same fix whenever they or close variants appear: ${top.map((c) => `"${c.from}" should be "${c.to}"`).join('; ')}.`;
+    }
     const res = await fetch(`${s.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
       headers: {

@@ -2,7 +2,7 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-const LISTEN_CHANNELS = ['settings-changed', 'goto-tab', 'history-changed'];
+const LISTEN_CHANNELS = ['settings-changed', 'goto-tab', 'history-changed', 'edit-latest'];
 
 contextBridge.exposeInMainWorld('murmur', {
   on(channel, cb) {
@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('murmur', {
   listModels: () => ipcRenderer.invoke('models:list'),
   captureHoldKey: () => ipcRenderer.invoke('hold:capture'),
   historyList: () => ipcRenderer.invoke('history:list'),
+  historyUpdate: (id, text) => ipcRenderer.invoke('history:update', id, text),
   historyDelete: (id) => ipcRenderer.invoke('history:delete', id),
   historyClear: () => ipcRenderer.invoke('history:clear'),
   openExternal: (url) => ipcRenderer.send('open-external', url),

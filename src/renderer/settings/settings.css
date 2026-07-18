@@ -365,6 +365,40 @@ select { cursor: pointer; }
 
 .empty { color: var(--faint); font-size: 12.5px; padding: 18px 0; }
 
+.subhead { margin-top: 34px; }
+
+.corr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--hairline);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.corr-from { color: var(--muted); }
+.corr-arrow { color: var(--faint); }
+.corr-to { color: var(--text); }
+.corr-count { margin-left: auto; color: var(--faint); font-size: 10px; }
+
+.h-text-edit {
+  flex: 1;
+  min-height: 64px;
+  background: var(--panel-2);
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  outline: none;
+  resize: vertical;
+}
+
+.toast.ok { border-left-color: var(--amber); }
+
 /* ---------------------------------------------------------------- history */
 
 .history-list { margin-top: 4px; }

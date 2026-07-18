@@ -12,6 +12,7 @@ const history = require('./history');
 const transcribe = require('./transcribe');
 const inject = require('./inject');
 const hotkeys = require('./hotkeys');
+const corrections = require('./corrections');
 
 const SMOKE = process.argv.includes('--smoke');
 const ASSETS = path.join(__dirname, '..', '..', 'assets', 'generated');
@@ -73,11 +74,12 @@ function sendOverlay(channel, payload) {
   if (overlayWin && !overlayWin.isDestroyed()) overlayWin.webContents.send(channel, payload);
 }
 
-function openSettings(tab) {
+function openSettings(tab, extraEvent) {
   if (settingsWin && !settingsWin.isDestroyed()) {
     settingsWin.show();
     settingsWin.focus();
     if (tab) settingsWin.webContents.send('goto-tab', tab);
+    if (extraEvent) settingsWin.webContents.send(extraEvent);
     return;
   }
   settingsWin = new BrowserWindow({
@@ -101,6 +103,7 @@ function openSettings(tab) {
   settingsWin.once('ready-to-show', () => {
     settingsWin.show();
     if (tab) settingsWin.webContents.send('goto-tab', tab);
+    if (extraEvent) settingsWin.webContents.send(extraEvent);
   });
   settingsWin.on('closed', () => { settingsWin = null; });
 }
@@ -180,6 +183,7 @@ async function handleAudio(arrayBuffer, meta) {
     if (raw.length < 1200) throw new Error('No speech detected');
     let text = await transcribe.transcribe(raw, s);
     if (!text) throw new Error('No speech detected');
+    text = corrections.applyCorrections(text, s.corrections);
     if (s.smartFormat) text = await transcribe.smartFormat(text, s);
     if (gen !== recGen) return; // cancelled while transcribing
     await inject.insert(text, s);
@@ -239,6 +243,7 @@ function createTray() {
   tray.setToolTip('Murmur, push to talk dictation');
   const menu = Menu.buildFromTemplate([
     { label: 'Start dictation', click: () => startDictation('toggle') },
+    { label: 'Fix last dictation', click: () => openSettings('history', 'edit-latest') },
     { type: 'separator' },
     { label: 'Settings', click: () => openSettings() },
     { label: 'History', click: () => openSettings('history') },
@@ -304,6 +309,23 @@ function registerIpc() {
     return result;
   });
   ipcMain.handle('history:list', () => history.list());
+  ipcMain.handle('history:update', (e, id, newText) => {
+    const prev = history.update(id, newText);
+    let learned = [];
+    let promoted = [];
+    if (prev !== null && prev !== newText) {
+      const res = corrections.learn(prev, newText, settings.get());
+      learned = res.pairs;
+      promoted = res.promoted;
+      if (learned.length) {
+        settings.set({ corrections: res.corrections, dictionary: res.dictionary });
+        if (settingsWin && !settingsWin.isDestroyed()) {
+          settingsWin.webContents.send('settings-changed', settings.get());
+        }
+      }
+    }
+    return { items: history.list(), learned, promoted };
+  });
   ipcMain.handle('history:delete', (e, id) => { history.remove(id); return history.list(); });
   ipcMain.handle('history:clear', () => { history.clear(); return []; });
   ipcMain.on('open-external', (e, url) => {
@@ -342,6 +364,10 @@ async function runSmoke() {
     } else resolve(true);
   });
   checks.sendKeysEscape = inject.escapeSendKeys('a+b{c}\n') === 'a{+}b{{}c{}}{ENTER}';
+  checks.correctionDiff = JSON.stringify(corrections.diffPairs('open cloud code now', 'open Claude Code now'))
+    === JSON.stringify([{ from: 'cloud code', to: 'Claude Code' }]);
+  checks.correctionApply = corrections.applyCorrections('i use cloud code daily', [{ from: 'cloud code', to: 'Claude Code' }])
+    === 'i use Claude Code daily';
   // Boot the settings renderer hidden and make sure it wires up cleanly.
   checks.settingsRenderer = await new Promise((resolve) => {
     const win = new BrowserWindow({
@@ -392,7 +418,7 @@ async function runSmoke() {
     });
     setTimeout(() => resolve(false), 15000);
   });
-  const required = ['iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals', 'injectHelper', 'injectChain', 'overlayLoaded', 'sendKeysEscape', 'settingsRenderer', 'onboardDismiss'];
+  const required = ['iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals', 'injectHelper', 'injectChain', 'overlayLoaded', 'sendKeysEscape', 'correctionDiff', 'correctionApply', 'settingsRenderer', 'onboardDismiss'];
   const ok = required.every((k) => checks[k] === true);
   console.log('SMOKE_RESULT ' + JSON.stringify({ ok, checks }));
   inject.dispose();

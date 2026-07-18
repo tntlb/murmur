@@ -16,6 +16,7 @@ const DEFAULTS = {
   smartFormat: true,
   formatModel: 'llama-3.1-8b-instant',
   dictionary: [],
+  corrections: [], // learned {from, to, count, ts} pairs from History edits
   // input
   micDeviceId: 'default',
   toggleShortcut: 'Control+Shift+Space',

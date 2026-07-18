@@ -206,6 +206,24 @@
       "priority": 4,
       "passes": true,
       "notes": "Verified 2026-07-17: npm run dist produced release/Murmur-0.1.0-portable.exe (85.6 MB) and Murmur Setup 0.1.0.exe with npmRebuild off. README covers quick start, key steps, hotkeys, costs, local/free alternatives, privacy, troubleshooting. .gitignore excludes node_modules, release, generated assets; MIT LICENSE added; no secrets in repo."
+    },
+    {
+      "id": "US-014",
+      "title": "Correction learning loop",
+      "description": "As a user, when Murmur mishears something (cloud code instead of Claude Code), I fix the transcript once in History and Murmur learns: the exact fix applies to every future dictation automatically, and terms I fix twice are promoted into my dictionary.",
+      "acceptanceCriteria": [
+        "History items have a Fix action that opens an inline editor; saving diffs the original against my edit and extracts phrase-level correction pairs",
+        "Learned pairs apply deterministically to future transcripts (case-insensitive, whole-word) even with Smart formatting off",
+        "Learned pairs also feed the formatter prompt so close variants get caught",
+        "The same pair fixed twice promotes the corrected term into the dictionary automatically",
+        "Corrections are listed in the Dictionary tab with counts and can be individually forgotten; the list caps at 100 pairs",
+        "Tray offers Fix last dictation, which opens the newest history item already in edit mode",
+        "Single-word capitalization-only edits are ignored (style, not mishearing) so no dangerously broad rules get learned",
+        "Diff and apply logic covered by required smoke checks"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Built 2026-07-17 at Labroi's request after real slips (cloud code for Claude Code, inequality for in quality). Smoke verifies diff extraction and deterministic apply. Needs one live loop to flip: dictate something it mishears, tray, Fix last dictation, save the fix, dictate the same phrase again and see it come out right."
     }
   ]
 }

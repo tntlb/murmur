@@ -43,6 +43,17 @@ function list() {
   return items.slice();
 }
 
+// Replaces an item's text (a user fix); returns the previous text or null.
+function update(id, text) {
+  const item = items.find((i) => i.id === id);
+  if (!item) return null;
+  const prev = item.text;
+  item.text = text;
+  item.words = text.trim().split(/\s+/).filter(Boolean).length;
+  save();
+  return prev;
+}
+
 function remove(id) {
   items = items.filter((i) => i.id !== id);
   save();
@@ -53,4 +64,4 @@ function clear() {
   save();
 }
 
-module.exports = { init, add, list, remove, clear };
+module.exports = { init, add, list, update, remove, clear };
