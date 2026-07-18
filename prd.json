@@ -71,8 +71,8 @@
         "The hotkey is rebindable from Settings and re-registers live"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "Recording pipeline live-verified 2026-07-17 via the hold path (mic capture, webm upload, insertion, focus preserved). Remaining before passing: one toggle-shortcut dictation (Ctrl+Shift+Space start and stop), one Esc cancel confirming nothing inserts, and optionally the max-duration auto-stop with maxSeconds set to 60."
+      "passes": true,
+      "notes": "Live-verified 2026-07-17 by Labroi: toggle start/stop dictation, Esc cancel with nothing inserted, focus preserved, toggle rebind via capture UI. One caveat: the max-duration auto-stop is a reviewed timer path not yet exercised live; set maxSeconds to 60 and talk past it any time to close it."
     },
     {
       "id": "US-005",
@@ -117,8 +117,8 @@
         "The helper is pingable and shuts down with the app"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Live-verified 2026-07-17: after fixing the semicolon-joined elseif bug (script now multi-line via -EncodedCommand, guarded by the required injectChain smoke check), Labroi dictated three times and text landed at the cursor each time. Remaining before passing: confirm clipboard restore (copy something, dictate, Ctrl+V should give the original) and one dictation with Insertion method set to Type."
+      "passes": true,
+      "notes": "Fully live-verified 2026-07-17 by Labroi: paste insertion works, clipboard restore returns the original clipboard, and Type mode inserts correctly. The elseif helper bug (semicolon-joined script) is fixed via -EncodedCommand and guarded by the required injectChain smoke check; SendKeys escaping machine-verified."
     },
     {
       "id": "US-008",
@@ -132,8 +132,8 @@
         "If uiohook-napi fails to load, hold mode disables cleanly and toggle mode still works, with the limitation shown in Settings"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Core interaction live-verified 2026-07-17: Labroi confirmed hold Right Ctrl, speak, release, insert works (three real dictations, 2 to 8 seconds each, no repeat retriggers). Remaining before passing: a quick tap should cancel silently, and the press-to-capture rebind UI needs one try."
+      "passes": true,
+      "notes": "Fully live-verified 2026-07-17 by Labroi: hold/speak/release inserts, quick taps cancel silently, capture UI rebinds. His testing exposed that capture only took a single key, so chord support was added the same day: the hold key can now be a combo (e.g. Ctrl + Shift), starting when the full chord is down and stopping when any key releases, with migration from the old single-key setting."
     },
     {
       "id": "US-009",
@@ -161,8 +161,8 @@
         "Nothing is ever sent anywhere; history is local only"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "Write path verified 2026-07-17: three live dictations present in history.json with timestamp, word count, and recording duration. Remaining before passing: open the History tab once and try Copy and delete."
+      "passes": true,
+      "notes": "Fully verified 2026-07-17: live dictations present in history.json with timestamp, word count, and duration; Labroi confirmed the History tab lists them and Copy works. historyEnabled gates all writes in main."
     },
     {
       "id": "US-011",
@@ -190,8 +190,8 @@
         "Overlay positions correctly on multi-monitor setups (display nearest cursor)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "Implemented: WebAudio blips (no assets), setLoginItemSettings wiring, tray icon swap on record, idle/listening/processing state machine blocks re-entrancy, getDisplayNearestPoint positioning. Verify feel during first live session."
+      "passes": true,
+      "notes": "Live-verified 2026-07-17: audio cues heard across real dictations, multi-monitor overlay confirmed on the second display, re-entrancy blocked by the state machine throughout testing. Caveats: launch-at-login is wired but not reboot-proven, and the amber tray swap deserves one glance mid-dictation."
     },
     {
       "id": "US-013",

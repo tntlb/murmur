@@ -20,7 +20,7 @@ const DEFAULTS = {
   micDeviceId: 'default',
   toggleShortcut: 'Control+Shift+Space',
   holdEnabled: true,
-  holdKeycode: 3613, // uiohook VC_CONTROL_R (Right Ctrl)
+  holdKeycodes: [3613], // uiohook VC_CONTROL_R (Right Ctrl); chords hold multiple codes
   holdKeyLabel: 'Right Ctrl',
   // insertion
   insertMethod: 'paste', // 'paste' | 'type'
@@ -43,6 +43,9 @@ function init() {
     if (fs.existsSync(filePath)) {
       const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
       current = { ...DEFAULTS, ...raw };
+      // Migrate the pre-chord single hold key field.
+      if (raw.holdKeycode && !raw.holdKeycodes) current.holdKeycodes = [raw.holdKeycode];
+      delete current.holdKeycode;
     }
   } catch (err) {
     console.error('settings: could not read, using defaults:', err.message);

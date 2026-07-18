@@ -218,8 +218,8 @@ $('holdKeyBtn').addEventListener('click', async () => {
   btn.classList.add('listening');
   btn.textContent = 'press any key...';
   try {
-    const { keycode, label } = await window.murmur.captureHoldKey();
-    await save({ holdKeycode: keycode, holdKeyLabel: label });
+    const { keycodes, label } = await window.murmur.captureHoldKey();
+    await save({ holdKeycodes: keycodes, holdKeyLabel: label });
   } catch {
     toast('Key capture timed out.');
   }

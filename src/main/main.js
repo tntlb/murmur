@@ -215,7 +215,7 @@ function applyHotkeys() {
   }
   if (s.holdEnabled && hotkeys.available()) {
     hotkeys.bindHold(
-      s.holdKeycode,
+      s.holdKeycodes,
       () => { if (state === 'idle') startDictation('hold'); },
       () => {
         if (state === 'listening' && recSource === 'hold') {
@@ -277,7 +277,7 @@ function registerIpc() {
     if ('launchAtLogin' in partial) {
       app.setLoginItemSettings({ openAtLogin: next.launchAtLogin });
     }
-    const needsRebind = ['toggleShortcut', 'holdEnabled', 'holdKeycode'].some((k) => k in partial);
+    const needsRebind = ['toggleShortcut', 'holdEnabled', 'holdKeycodes'].some((k) => k in partial);
     if (needsRebind && !SMOKE) {
       if (!applyHotkeys()) {
         settings.set({ toggleShortcut: before.toggleShortcut });
