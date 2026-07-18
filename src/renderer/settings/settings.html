@@ -149,11 +149,31 @@
 
         <div class="row">
           <div class="row-text">
+            <div class="row-title">Transcription model</div>
+            <div class="row-desc">Prices are pay-as-you-go rates per hour of speech. On Groq's free tier, every model is $0 within generous daily limits.</div>
+          </div>
+          <div class="row-ctl grow">
+            <select id="model"></select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-text">
             <div class="row-title">Smart formatting</div>
             <div class="row-desc">A fast LLM removes filler words and fixes punctuation. Falls back to the raw transcript on any hiccup.</div>
           </div>
           <div class="row-ctl">
             <label class="switch"><input type="checkbox" id="smartFormat" /><span></span></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Formatting model</div>
+            <div class="row-desc">A dictation is about 150 tokens, so even the priciest option here costs a fraction of a cent per dictation.</div>
+          </div>
+          <div class="row-ctl grow">
+            <select id="formatModel"></select>
           </div>
         </div>
 
@@ -187,28 +207,10 @@
           <div class="row">
             <div class="row-text">
               <div class="row-title">Base URL</div>
-              <div class="row-desc">Any OpenAI-compatible endpoint. Point this at a local Whisper server to run free and offline.</div>
+              <div class="row-desc">Any OpenAI-compatible endpoint. Point this at a local Whisper server to run free and offline; the model lists above refresh from whatever endpoint you set.</div>
             </div>
             <div class="row-ctl grow">
               <input type="text" id="baseUrl" class="mono-input" spellcheck="false" />
-            </div>
-          </div>
-          <div class="row">
-            <div class="row-text">
-              <div class="row-title">Transcription model</div>
-              <div class="row-desc">whisper-large-v3-turbo is the best speed for the price on Groq.</div>
-            </div>
-            <div class="row-ctl grow">
-              <input type="text" id="model" class="mono-input" spellcheck="false" />
-            </div>
-          </div>
-          <div class="row">
-            <div class="row-text">
-              <div class="row-title">Formatting model</div>
-              <div class="row-desc">Used only when Smart formatting is on.</div>
-            </div>
-            <div class="row-ctl grow">
-              <input type="text" id="formatModel" class="mono-input" spellcheck="false" />
             </div>
           </div>
         </details>

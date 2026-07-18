@@ -292,6 +292,13 @@ function registerIpc() {
   });
 
   ipcMain.handle('connection:test', () => transcribe.testConnection(settings.get()));
+  ipcMain.handle('models:list', async () => {
+    try {
+      return { ok: true, models: await transcribe.listModels(settings.get()) };
+    } catch (err) {
+      return { ok: false, message: err.message, models: [] };
+    }
+  });
   ipcMain.handle('hold:capture', async () => {
     const result = await hotkeys.captureNextKey();
     return result;
@@ -321,6 +328,9 @@ async function runSmoke() {
   checks.holdAvailable = hotkeys.available();
   try {
     checks.injectHelper = await inject.ping();
+    const chain = await inject.probeChain();
+    checks.injectChain = chain === 'unknown command';
+    if (!checks.injectChain) checks.injectChainError = chain;
   } catch (err) {
     checks.injectHelper = false;
     checks.injectHelperError = err.message;
@@ -353,6 +363,11 @@ async function runSmoke() {
         const wired = await win.webContents.executeJavaScript(
           "!!window.murmur && !!document.getElementById('nav') && document.getElementById('verLine').textContent !== 'v0.0.0'"
         );
+        // Informational (not required, so offline machines stay green):
+        // the model dropdowns should populate from the API or fall back.
+        checks.modelDropdown = await win.webContents.executeJavaScript(
+          "document.getElementById('model').options.length > 0"
+        );
         // Regression check: clicking "Start using Murmur" must actually
         // dismiss the welcome card (visually, not just the hidden attribute).
         checks.onboardDismiss = await win.webContents.executeJavaScript(`(async () => {
@@ -377,7 +392,7 @@ async function runSmoke() {
     });
     setTimeout(() => resolve(false), 15000);
   });
-  const required = ['iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals', 'injectHelper', 'overlayLoaded', 'sendKeysEscape', 'settingsRenderer', 'onboardDismiss'];
+  const required = ['iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals', 'injectHelper', 'injectChain', 'overlayLoaded', 'sendKeysEscape', 'settingsRenderer', 'onboardDismiss'];
   const ok = required.every((k) => checks[k] === true);
   console.log('SMOKE_RESULT ' + JSON.stringify({ ok, checks }));
   inject.dispose();

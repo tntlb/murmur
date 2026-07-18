@@ -118,7 +118,7 @@
       ],
       "priority": 2,
       "passes": false,
-      "notes": "Helper ping and SendKeys escaping ('a+b{c}\\n' case) machine-verified in smoke; helper disposal on quit verified by clean smoke exit. The actual paste into a focused third-party app needs a live dictation to verify."
+      "notes": "Labroi's first live dictation caught a real bug here: the helper script was joined into one line with semicolons, which breaks if/elseif in PowerShell, so every paste failed with a 'term elseif is not recognized' error (ping alone passed, masking it). Fixed 2026-07-17: script is now true multi-line via -EncodedCommand, and a new required smoke check (injectChain) exercises the full command chain. Ping, chain, and SendKeys escaping machine-verified; the paste landing in a real app still needs the next live dictation."
     },
     {
       "id": "US-008",

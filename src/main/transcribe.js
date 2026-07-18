@@ -104,6 +104,16 @@ async function smartFormat(text, s) {
   }
 }
 
+async function listModels(s) {
+  const res = await fetch(`${s.baseUrl.replace(/\/$/, '')}/models`, {
+    headers: { Authorization: `Bearer ${s.apiKey}` },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw apiError(res.status, await res.text().catch(() => ''));
+  const json = await res.json();
+  return (json.data || []).map((m) => m.id).sort();
+}
+
 async function testConnection(s) {
   try {
     const res = await fetch(`${s.baseUrl.replace(/\/$/, '')}/models`, {
@@ -117,4 +127,4 @@ async function testConnection(s) {
   }
 }
 
-module.exports = { transcribe, smartFormat, testConnection };
+module.exports = { transcribe, smartFormat, testConnection, listModels };

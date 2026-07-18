@@ -55,7 +55,9 @@ Both keys are rebindable in Settings, General.
 
 Smart formatting uses `llama-3.1-8b-instant` on Groq, which is effectively free at dictation volumes. Turning Smart formatting off removes that call entirely.
 
-**Going fully local**: run any OpenAI-compatible Whisper server, for example [speaches](https://github.com/speaches-ai/speaches) or faster-whisper-server, then in Settings, Voice & model, Advanced set Base URL to your server (like `http://localhost:8000/v1`) and pick your local model name. Nothing leaves your machine.
+Settings, Voice & model has dropdowns for both models, listing whatever your endpoint actually serves with approximate pay-as-you-go prices annotated inline. On the free tier the price annotations are moot: everything is $0 until you add billing.
+
+**Going fully local**: run any OpenAI-compatible Whisper server, for example [speaches](https://github.com/speaches-ai/speaches) or faster-whisper-server, then in Settings, Voice & model, Advanced set Base URL to your server (like `http://localhost:8000/v1`). The model dropdowns refresh from the new endpoint. Nothing leaves your machine.
 
 ## Privacy
 

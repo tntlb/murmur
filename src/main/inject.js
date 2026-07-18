@@ -10,20 +10,35 @@
 const { spawn } = require('child_process');
 const { clipboard } = require('electron');
 
-const PS_SCRIPT = [
-  "$ErrorActionPreference='Stop'",
-  'Add-Type -AssemblyName System.Windows.Forms',
-  'while($true){',
-  '$l=[Console]::In.ReadLine()',
-  'if($null -eq $l){break}',
-  'try{',
-  "if($l -eq 'ping'){[Console]::Out.WriteLine('ok')}",
-  "elseif($l -eq 'paste'){[System.Windows.Forms.SendKeys]::SendWait('^v');[Console]::Out.WriteLine('ok')}",
-  "elseif($l.StartsWith('type:')){$b=[Convert]::FromBase64String($l.Substring(5));$t=[System.Text.Encoding]::UTF8.GetString($b);[System.Windows.Forms.SendKeys]::SendWait($t);[Console]::Out.WriteLine('ok')}",
-  "else{[Console]::Out.WriteLine('err:unknown command')}",
-  "}catch{[Console]::Out.WriteLine('err:' + $_.Exception.Message)}",
-  '}',
-].join('; ');
+// A real multi-line script passed via -EncodedCommand, so PowerShell parses
+// it exactly as written. (An earlier version joined these lines with
+// semicolons, which breaks if/elseif chains at runtime.)
+const PS_SCRIPT = `
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Windows.Forms
+while ($true) {
+  $l = [Console]::In.ReadLine()
+  if ($null -eq $l) { break }
+  try {
+    if ($l -eq 'ping') {
+      [Console]::Out.WriteLine('ok')
+    } elseif ($l -eq 'paste') {
+      [System.Windows.Forms.SendKeys]::SendWait('^v')
+      [Console]::Out.WriteLine('ok')
+    } elseif ($l.StartsWith('type:')) {
+      $b = [Convert]::FromBase64String($l.Substring(5))
+      $t = [System.Text.Encoding]::UTF8.GetString($b)
+      [System.Windows.Forms.SendKeys]::SendWait($t)
+      [Console]::Out.WriteLine('ok')
+    } else {
+      [Console]::Out.WriteLine('err:unknown command')
+    }
+  } catch {
+    [Console]::Out.WriteLine('err:' + $_.Exception.Message)
+  }
+}
+`;
+const PS_ENCODED = Buffer.from(PS_SCRIPT, 'utf16le').toString('base64');
 
 let ps = null;
 let pending = [];
@@ -31,7 +46,7 @@ let stdoutBuf = '';
 
 function ensureHelper() {
   if (ps) return;
-  ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Sta', '-Command', PS_SCRIPT], {
+  ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Sta', '-EncodedCommand', PS_ENCODED], {
     windowsHide: true,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
@@ -113,6 +128,18 @@ async function ping() {
   return true;
 }
 
+// Exercises the full if/elseif/else chain at runtime: an unknown command must
+// come back as exactly 'unknown command'. A broken chain surfaces a PowerShell
+// parse or term error here instead, which is how the elseif bug was caught.
+async function probeChain() {
+  try {
+    await send('murmur-probe-unknown', 8000);
+    return 'no-error';
+  } catch (err) {
+    return err.message;
+  }
+}
+
 function dispose() {
   if (ps) {
     try { ps.stdin.end(); } catch {}
@@ -121,4 +148,4 @@ function dispose() {
   }
 }
 
-module.exports = { insert, ping, dispose, escapeSendKeys };
+module.exports = { insert, ping, probeChain, dispose, escapeSendKeys };

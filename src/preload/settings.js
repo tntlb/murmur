@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('murmur', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (partial) => ipcRenderer.invoke('settings:set', partial),
   testConnection: () => ipcRenderer.invoke('connection:test'),
+  listModels: () => ipcRenderer.invoke('models:list'),
   captureHoldKey: () => ipcRenderer.invoke('hold:capture'),
   historyList: () => ipcRenderer.invoke('history:list'),
   historyDelete: (id) => ipcRenderer.invoke('history:delete', id),

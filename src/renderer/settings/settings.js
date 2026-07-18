@@ -41,8 +41,8 @@ function render() {
   $('maxSeconds').value = String(S.maxSeconds);
   if (document.activeElement !== $('apiKey')) $('apiKey').value = S.apiKey;
   if (document.activeElement !== $('baseUrl')) $('baseUrl').value = S.baseUrl;
-  if (document.activeElement !== $('model')) $('model').value = S.model;
-  if (document.activeElement !== $('formatModel')) $('formatModel').value = S.formatModel;
+  if ($('model').options.length) $('model').value = S.model;
+  if ($('formatModel').options.length) $('formatModel').value = S.formatModel;
   $('smartFormat').checked = S.smartFormat;
   $('language').value = S.language;
   $('historyEnabled').checked = S.historyEnabled;
@@ -68,7 +68,7 @@ function gotoTab(tab) {
   document.querySelectorAll('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.dataset.panel === tab));
   if (tab === 'history') refreshHistory();
-  if (tab === 'voice') populateMics();
+  if (tab === 'voice') { populateMics(); populateModels(true); }
 }
 
 window.murmur.on('goto-tab', gotoTab);
@@ -89,10 +89,94 @@ bindValue('insertMethod', 'insertMethod');
 bindValue('maxSeconds', 'maxSeconds', Number);
 bindValue('language', 'language');
 bindValue('apiKey', 'apiKey', (v) => v.trim());
-bindValue('baseUrl', 'baseUrl', (v) => v.trim().replace(/\/$/, ''));
-bindValue('model', 'model', (v) => v.trim());
-bindValue('formatModel', 'formatModel', (v) => v.trim());
 bindValue('micSelect', 'micDeviceId');
+$('baseUrl').addEventListener('change', async (e) => {
+  await save({ baseUrl: e.target.value.trim().replace(/\/$/, '') });
+  populateModels(true);
+});
+
+// ---------------------------------------------------------------- model pickers
+
+// Pay-as-you-go rates for models Groq commonly serves; free tier is $0 within
+// daily limits regardless. Unlisted models show without a price note.
+const STT_NOTES = {
+  'whisper-large-v3-turbo': '~$0.04/hr · fast · recommended',
+  'whisper-large-v3': '~$0.11/hr · highest accuracy',
+  'distil-whisper-large-v3-en': '~$0.02/hr · English only',
+};
+const LLM_NOTES = {
+  'llama-3.1-8b-instant': 'fastest · ~$0.06 per 1M tokens · recommended',
+  'llama-3.3-70b-versatile': 'smartest cleanup · ~$0.70 per 1M tokens',
+  'openai/gpt-oss-20b': 'strong + cheap · ~$0.15 per 1M tokens',
+  'openai/gpt-oss-120b': 'very strong · ~$0.40 per 1M tokens',
+};
+
+let modelsCache = null;
+
+function fillModelSelect(sel, ids, notes, current) {
+  const list = ids.slice();
+  if (current && !list.includes(current)) list.unshift(current);
+  sel.replaceChildren();
+  for (const id of list) {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = notes[id] ? `${id} · ${notes[id]}` : id;
+    sel.appendChild(opt);
+  }
+  const custom = document.createElement('option');
+  custom.value = '__custom';
+  custom.textContent = 'Custom model id...';
+  sel.appendChild(custom);
+  sel.value = current;
+}
+
+async function populateModels(force = false) {
+  if (modelsCache === null || force) {
+    const res = await window.murmur.listModels();
+    modelsCache = res.ok ? res.models : [];
+  }
+  const stt = modelsCache.filter((id) => /whisper/i.test(id));
+  const llm = modelsCache.filter((id) => !/whisper|orpheus|tts|guard|embed|compound/i.test(id));
+  fillModelSelect($('model'), stt.length ? stt : Object.keys(STT_NOTES), STT_NOTES, S.model);
+  fillModelSelect($('formatModel'), llm.length ? llm : Object.keys(LLM_NOTES), LLM_NOTES, S.formatModel);
+}
+
+function bindModelSelect(selId, key) {
+  const sel = $(selId);
+  sel.addEventListener('change', () => {
+    if (sel.value !== '__custom') {
+      save({ [key]: sel.value });
+      return;
+    }
+    // Swap the select for a text input so any model id can be typed.
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'mono-input';
+    input.placeholder = 'model-id';
+    input.value = S[key];
+    input.style.flex = '1';
+    sel.replaceWith(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const commit = async (revert) => {
+      if (done) return;
+      done = true;
+      const v = input.value.trim();
+      input.replaceWith(sel);
+      if (!revert && v && v !== S[key]) await save({ [key]: v });
+      await populateModels();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') commit(false);
+      if (e.key === 'Escape') commit(true);
+    });
+    input.addEventListener('blur', () => commit(false));
+  });
+}
+
+bindModelSelect('model', 'model');
+bindModelSelect('formatModel', 'formatModel');
 
 // toggle shortcut capture (DOM keydown -> Electron accelerator)
 const CODE_MAP = { Space: 'Space', Comma: ',', Period: '.', Slash: '/', Backquote: '`', Minus: '-', Equal: '=', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Backslash: '\\' };
@@ -158,7 +242,8 @@ async function runTest(statusEl) {
 $('testBtn').addEventListener('click', async () => {
   if (document.activeElement === $('apiKey')) $('apiKey').blur();
   await save({ apiKey: $('apiKey').value.trim() });
-  runTest($('testStatus'));
+  const ok = await runTest($('testStatus'));
+  if (ok) populateModels(true);
 });
 
 // ---------------------------------------------------------------- microphone
@@ -351,5 +436,6 @@ window.murmur.on('settings-changed', (settings) => {
   META = meta;
   render();
   populateMics();
+  populateModels();
   if (!S.onboarded) $('onboard').hidden = false;
 })();
