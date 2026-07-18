@@ -88,7 +88,7 @@
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Verified 2026-07-17 during Labroi's live dictations: waveform, listening/processing/inserted states, and word count all observed; the error state was observed earlier with a readable message (the elseif bug pill). Focus never left the target app, proven by the paste landing where the cursor was. Reduced-motion handled in CSS."
+      "notes": "Verified 2026-07-17 during Labroi's live dictations: waveform, listening/processing/inserted states, and word count all observed; the error state was observed earlier with a readable message (the elseif bug pill). Focus never left the target app, proven by the paste landing where the cursor was. Reduced-motion handled in CSS. Late-night live use found a mic-open race: releasing the key while getUserMedia was still resolving left an orphaned recorder holding the mic, corrupting every later take (decode errors), with a leaked timer overwriting the error text. Fixed with generation-guarded capture, defensive timer clearing, and an 8 second warm-stream window that also removes most start lag."
     },
     {
       "id": "US-006",

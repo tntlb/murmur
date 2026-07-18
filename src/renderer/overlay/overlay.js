@@ -2,6 +2,13 @@
 
 // The overlay owns the microphone: capture, waveform, and cues all live here
 // so the pill reflects the real signal, not a simulation of it.
+//
+// Two hard-won rules encoded below:
+// 1. getUserMedia is slow (hundreds of ms). Every await is generation-guarded
+//    so a release/cancel during mic-open can never leave an orphaned recorder
+//    holding the mic and corrupting the next dictation.
+// 2. The stream stays warm for a few seconds after a dictation, so
+//    back-to-back dictations start instantly instead of re-opening the mic.
 
 const pill = document.getElementById('pill');
 const label = document.getElementById('label');
@@ -14,12 +21,16 @@ const AMBER = [240, 164, 75];
 const BAR_COUNT = 44;
 const BAR_W = 3;
 const GAP = 2;
+const WARM_STREAM_MS = 8000;
 
 let stream = null;
+let lastDeviceId = null;
+let releaseTimer = 0;
 let recorder = null;
 let chunks = [];
 let audioCtx = null;
 let analyser = null;
+let captureGen = 0;
 let raf = 0;
 let bars = [];
 let startedAt = 0;
@@ -117,31 +128,85 @@ function stopDrawing() {
   raf = 0;
 }
 
+// ---------------------------------------------------------------- mic stream
+
+function releaseStream() {
+  clearTimeout(releaseTimer);
+  releaseTimer = 0;
+  if (stream) {
+    stream.getTracks().forEach((t) => t.stop());
+    stream = null;
+  }
+  if (audioCtx) {
+    audioCtx.close().catch(() => {});
+    audioCtx = null;
+  }
+  analyser = null;
+  lastDeviceId = null;
+}
+
+function scheduleStreamRelease() {
+  clearTimeout(releaseTimer);
+  releaseTimer = setTimeout(releaseStream, WARM_STREAM_MS);
+}
+
+function streamIsWarm(deviceId) {
+  return (
+    stream &&
+    lastDeviceId === (deviceId || 'default') &&
+    stream.getTracks().length &&
+    stream.getTracks().every((t) => t.readyState === 'live')
+  );
+}
+
 // ---------------------------------------------------------------- recording
 
 async function startCapture({ deviceId, sounds }) {
   soundsOn = sounds !== false;
   bars = [];
   chunks = [];
-  mode = 'live';
-  try {
-    const audio = {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
-    };
-    if (deviceId && deviceId !== 'default') audio.deviceId = { exact: deviceId };
-    stream = await navigator.mediaDevices.getUserMedia({ audio });
-  } catch (err) {
-    mode = 'idle';
-    window.murmur.recError(micErrorMessage(err));
-    return;
-  }
-  audioCtx = new AudioContext();
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 1024;
-  audioCtx.createMediaStreamSource(stream).connect(analyser);
+  clearTimeout(releaseTimer);
+  const gen = ++captureGen;
 
+  // Defensive: a recorder should never still exist here, but never let one
+  // linger and interleave into the new take.
+  if (recorder && recorder.state !== 'inactive') {
+    try { recorder.stop(); } catch {}
+  }
+  recorder = null;
+
+  if (!streamIsWarm(deviceId)) {
+    releaseStream();
+    let acquired;
+    try {
+      const audio = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      };
+      if (deviceId && deviceId !== 'default') audio.deviceId = { exact: deviceId };
+      acquired = await navigator.mediaDevices.getUserMedia({ audio });
+    } catch (err) {
+      if (gen === captureGen) {
+        mode = 'idle';
+        window.murmur.recError(micErrorMessage(err));
+      }
+      return;
+    }
+    if (gen !== captureGen) {
+      // Released or cancelled while the mic was opening; walk away cleanly.
+      acquired.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    stream = acquired;
+    lastDeviceId = deviceId || 'default';
+    audioCtx = new AudioContext();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+  }
+
+  mode = 'live';
   const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
   // 48 kbps opus is transparent for speech recognition and keeps even an
   // hour-long take (~21 MB) under Groq's 25 MB free-tier upload cap.
@@ -173,7 +238,15 @@ function stopCapture(discard) {
   stopTimer();
   const ms = Date.now() - startedAt;
   if (!recorder || recorder.state === 'inactive') {
-    teardown();
+    // The mic was still opening when the key was released. Invalidate the
+    // pending acquisition so it can't start an orphaned recording.
+    captureGen++;
+    recorder = null;
+    chunks = [];
+    scheduleStreamRelease();
+    if (!discard) {
+      window.murmur.recError('The mic was still starting. Hold a moment longer and try again.');
+    }
     return;
   }
   recorder.onstop = async () => {
@@ -182,34 +255,22 @@ function stopCapture(discard) {
       const blob = new Blob(chunks, { type: 'audio/webm' });
       const buf = await blob.arrayBuffer();
       window.murmur.recData(buf, { ms });
+    } else {
+      mode = 'idle';
+      stopDrawing();
     }
-    teardown(discard);
+    recorder = null;
+    chunks = [];
+    scheduleStreamRelease();
   };
   recorder.stop();
   blip('stop');
 }
 
-function teardown(fully = false) {
-  if (stream) {
-    stream.getTracks().forEach((t) => t.stop());
-    stream = null;
-  }
-  if (audioCtx) {
-    audioCtx.close().catch(() => {});
-    audioCtx = null;
-  }
-  analyser = null;
-  recorder = null;
-  chunks = [];
-  if (fully) {
-    mode = 'idle';
-    stopDrawing();
-  }
-}
-
 // ---------------------------------------------------------------- timer + ui
 
 function startTimer() {
+  clearInterval(timerInterval); // never let two timers race over the readout
   value.textContent = '0:00';
   timerInterval = setInterval(() => {
     const sec = Math.floor((Date.now() - startedAt) / 1000);
@@ -219,12 +280,12 @@ function startTimer() {
 
 function stopTimer() {
   clearInterval(timerInterval);
+  timerInterval = 0;
 }
 
 window.murmur.on('rec-start', startCapture);
 window.murmur.on('rec-stop', () => stopCapture(false));
 window.murmur.on('rec-cancel', () => {
-  stopTimer();
   stopCapture(true);
   mode = 'idle';
   stopDrawing();
@@ -241,12 +302,14 @@ window.murmur.on('state', ({ state, words, message }) => {
     mode = 'processing';
     startDrawing();
   } else if (state === 'done') {
+    stopTimer();
     label.textContent = 'INSERTED';
     value.textContent = `${words} ${words === 1 ? 'word' : 'words'}`;
     mode = 'idle';
     stopDrawing();
     ctx.clearRect(0, 0, 220, 36);
   } else if (state === 'error') {
+    stopTimer();
     label.textContent = 'ERROR';
     value.textContent = message || 'Something went wrong';
     mode = 'idle';
