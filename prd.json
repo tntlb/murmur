@@ -102,8 +102,8 @@
         "Requests time out rather than hanging the pipeline"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Verified 2026-07-17 with Labroi's real key: synthesized voice clip transcribed exactly ('Testing 1 2 3 Murmur end to end test'); Test connection returned OK in the onboarding UI; invalid key returns the friendly 401 message; whisper-large-v3-turbo confirmed live on Groq's model list; timeouts implemented via AbortSignal."
+      "passes": true,
+      "notes": "Verified 2026-07-17 with Labroi's real key: synthesized voice clip transcribed exactly ('Testing 1 2 3 Murmur end to end test'); Test connection returned OK in the onboarding UI; invalid key returns the friendly 401 message; whisper-large-v3-turbo confirmed live on Groq's model list; timeouts implemented via AbortSignal. Flag reconciled 2026-07-19: passes lagged the recorded verification."
     },
     {
       "id": "US-007",
@@ -147,8 +147,8 @@
         "Formatted output preserves meaning; nothing is added"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "Verified 2026-07-17 with the real key: 'um so uh what time is it you know' formatted to 'What time is it?', fillers removed, punctuation fixed, and the question was not answered. llama-3.1-8b-instant confirmed live on Groq. Fail-open guards (error, empty, or 3x-length output falls back to raw) implemented; dictionary feeds both Whisper prompt and formatter."
+      "passes": true,
+      "notes": "Verified 2026-07-17 with the real key: 'um so uh what time is it you know' formatted to 'What time is it?', fillers removed, punctuation fixed, and the question was not answered. llama-3.1-8b-instant confirmed live on Groq. Fail-open guards (error, empty, or 3x-length output falls back to raw) implemented; dictionary feeds both Whisper prompt and formatter. Flag reconciled 2026-07-19: passes lagged the recorded verification."
     },
     {
       "id": "US-010",
@@ -175,8 +175,8 @@
         "Windows microphone privacy requirements are explained where mic selection happens"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "Verified 2026-07-17 on Labroi's first real launch: card appeared, key test showed 'OK, Connected', and the onboarded flag persisted. Found and fixed a bug where 'Start using Murmur' saved but the card stayed visible (.onboard's display:grid overrode the hidden attribute; global [hidden] { display:none !important } added). Dismissal is now a permanent smoke check (onboardDismiss)."
+      "passes": true,
+      "notes": "Verified 2026-07-17 on Labroi's first real launch: card appeared, key test showed 'OK, Connected', and the onboarded flag persisted. Found and fixed a bug where 'Start using Murmur' saved but the card stayed visible (.onboard's display:grid overrode the hidden attribute; global [hidden] { display:none !important } added). Dismissal is now a permanent smoke check (onboardDismiss). Flag reconciled 2026-07-19: passes lagged the recorded verification."
     },
     {
       "id": "US-012",
@@ -224,6 +224,145 @@
       "priority": 5,
       "passes": false,
       "notes": "Built 2026-07-17 at Labroi's request after real slips (cloud code for Claude Code, inequality for in quality). Smoke verifies diff extraction and deterministic apply. Needs one live loop to flip: dictate something it mishears, tray, Fix last dictation, save the fix, dictate the same phrase again and see it come out right."
+    },
+    {
+      "id": "US-015",
+      "title": "macOS platform support",
+      "description": "As a Mac user, Murmur works exactly like it does on Windows: hold Right Cmd, speak, release, and text lands at my cursor in any app.",
+      "acceptanceCriteria": [
+        "On macOS, insertion uses a persistent osascript helper: System Events keystroke \"v\" using command down for paste, System Events keystroke typing for Type mode, with the same line protocol (ping, paste, type:) as the PowerShell helper",
+        "inject.js selects the platform helper behind a single switch; win32 behavior is byte-for-byte unchanged",
+        "Missing Accessibility permission is detected (systemPreferences.isTrustedAccessibilityClient) and Settings guides the user to the Privacy pane deep link",
+        "Hold-to-talk works via uiohook-napi mac prebuilds; missing Input Monitoring permission shows guidance in Settings and hold mode falls back to toggle-only cleanly",
+        "Default hold key on macOS is Right Cmd; hotkey labels say Cmd, never Win, on darwin",
+        "gen-icons.js writes a monochrome Template tray icon variant for macOS; the recording state remains visually distinct",
+        "electron-builder produces dmg and zip targets with NSMicrophoneUsageDescription in Info.plist",
+        "npm run smoke passes on macOS with required checks covering the mac insertion helper (ping and unknown-command probe)"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Formatting styles and levels",
+      "description": "As a user, I choose how aggressively Murmur polishes my speech: a style (Conversation or Vibe-Coding) and a level from None to High, ported from VFlow.",
+      "acceptanceCriteria": [
+        "Style setting: Conversation (default) or Vibe-Coding; Vibe-Coding preserves developer terminology and formats identifiers sensibly",
+        "Level setting: None, Structure, Soft, Medium (default), High, each mapped to distinct formatter rules",
+        "None performs spelling and punctuation only, keeping exact words; High may restructure into polished professional prose without adding content",
+        "Medium and above resolve self-corrections to final intent (do X, actually Y keeps only Y)",
+        "Every level stays fail-open; a formatter failure never loses the raw transcript",
+        "Both settings live in Settings with one-line descriptions, persist, and broadcast like all other settings",
+        "Level and style prompt mapping covered by a smoke check"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Auto structure formatting",
+      "description": "As a user, when I dictate something that is obviously a list, sections, or multiple topics, the inserted text is structured that way without me speaking explicit commands.",
+      "acceptanceCriteria": [
+        "Spoken list cues (my grocery list, first, second, third) produce list formatting",
+        "Clear topic pivots (anyway, moving on, next topic) produce paragraph breaks",
+        "header X or section X produces a heading line",
+        "Plain comma enumerations inside a sentence are never bulletized",
+        "Applies at every level except None; fail-open preserved"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Text expansions",
+      "description": "As a user, I say a trigger phrase like my email and Murmur inserts the literal value, and that value never leaves my machine because expansion happens after all API calls.",
+      "acceptanceCriteria": [
+        "Expansions (trigger phrase plus replacement value) are managed in Settings with add, edit, delete, and per-item enable",
+        "Applied deterministically after formatting: whole-phrase, word-boundary, case-insensitive",
+        "Replacement values never appear in any API request body (not the Whisper prompt, not the formatter prompt)",
+        "Expansions work with Smart formatting off",
+        "Expansion apply logic covered by required smoke checks"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Local usage analytics",
+      "description": "As a user, I can see how much I dictate, what it costs, and how much time it saves me versus typing, all computed locally.",
+      "acceptanceCriteria": [
+        "Every completed dictation appends a local event: timestamp, audio seconds, word count, models used, estimated cost",
+        "An Analytics tab shows ranges (7d, 30d, 90d, all) with stat cards: minutes dictated, words, average WPM, estimated cost, time saved versus a configurable baseline typing WPM",
+        "A minutes-per-day chart drawn with dependency-free canvas or SVG in the night studio design system",
+        "Analytics can be turned off and the log cleared; nothing is ever sent anywhere",
+        "Event write and cost math covered by smoke checks"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Recap notifications",
+      "description": "As a user, Murmur celebrates my usage with an optional weekly, monthly, and yearly wrap-up notification, like VFlow did.",
+      "acceptanceCriteria": [
+        "Weekly, monthly, and yearly recaps each have an enable toggle and a configurable fire time under a master switch",
+        "A recap notification shows headline stats (minutes, words, time saved) and opens the Analytics tab when clicked",
+        "Each recap fires at most once per period (dedup persisted)",
+        "A Test button fires a sample recap immediately",
+        "Scheduler logic covered by a smoke check"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Depends on US-019."
+    },
+    {
+      "id": "US-021",
+      "title": "API key encrypted at rest",
+      "description": "As a user, my API key is not stored in plaintext on disk; it is encrypted with the OS keystore (Keychain on macOS, DPAPI on Windows).",
+      "acceptanceCriteria": [
+        "When Electron safeStorage is available, the key is stored encrypted in settings.json and decrypted only in the main process",
+        "Existing plaintext keys migrate to encrypted transparently on first load",
+        "If safeStorage is unavailable, Murmur falls back to plaintext without breaking, and Settings notes the limitation",
+        "Encrypt and decrypt roundtrip covered by a required smoke check"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Instant-start mic",
+      "description": "As a user, dictation starts capturing the instant I press the key, even the very first dictation of the day, so my first word is never clipped.",
+      "acceptanceCriteria": [
+        "Keep mic warm gains an Always option: the mic stream opens at launch and stays warm, with the tradeoff (persistent mic-in-use indicator) explained where the setting lives",
+        "While warm, recording starts within 50 ms of the key press",
+        "Speaking at the same moment as the key press yields an untruncated first word, verified live",
+        "Warm state survives settings changes and re-warms after device changes or errors",
+        "Cold start (warm off) continues to work exactly as before"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Overlay fly-in animation",
+      "description": "As a user, when I invoke dictation the overlay pill flies in with the mic waveform component, making the start of a take feel immediate and alive.",
+      "acceptanceCriteria": [
+        "The pill animates in (rise and settle from below with a subtle scale) when dictation starts, completing in under 250 ms",
+        "An exit animation plays when the overlay hides; no lingering visible window afterward",
+        "prefers-reduced-motion shows instant appear and hide with no motion",
+        "The overlay remains non-focusable and click-through throughout; focus never leaves the target app",
+        "Amber appears only for live states per the design system"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Added at Labroi's request during the port planning session."
     }
   ]
 }
