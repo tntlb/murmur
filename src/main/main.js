@@ -16,6 +16,7 @@ const inject = require('./inject');
 const hotkeys = require('./hotkeys');
 const corrections = require('./corrections');
 const expansions = require('./expansions');
+const analytics = require('./analytics');
 
 const SMOKE = process.argv.includes('--smoke');
 const ASSETS = path.join(__dirname, '..', '..', 'assets', 'generated');
@@ -197,6 +198,14 @@ async function handleAudio(arrayBuffer, meta) {
       history.add({ text, words, ms: meta && meta.ms ? meta.ms : 0, model: s.model });
       if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('history-changed');
     }
+    if (s.analyticsEnabled) {
+      analytics.add({
+        seconds: meta && meta.ms ? meta.ms / 1000 : 0,
+        words,
+        model: s.model,
+        formatModel: s.smartFormat ? s.formatModel : null,
+      });
+    }
     sendOverlay('state', { state: 'done', words, ms: Date.now() - startedProcessing });
     setTimeout(hideOverlayIfIdle, 1400);
   } catch (err) {
@@ -361,6 +370,8 @@ function registerIpc() {
     const result = await hotkeys.captureNextKey();
     return result;
   });
+  ipcMain.handle('analytics:list', () => analytics.list());
+  ipcMain.handle('analytics:clear', () => { analytics.clear(); return []; });
   ipcMain.handle('history:list', () => history.list());
   ipcMain.handle('history:update', (e, id, newText) => {
     const prev = history.update(id, newText);
@@ -449,6 +460,24 @@ async function runSmoke() {
   }
   checks.correctionApply = corrections.applyCorrections('i use cloud code daily', [{ from: 'cloud code', to: 'Claude Code' }])
     === 'i use Claude Code daily';
+  // Analytics: event write, read, and clear against a probe file so real
+  // usage data is never touched, plus cost math against the verified rates.
+  checks.analyticsEvents = (() => {
+    const probe = path.join(app.getPath('userData'), 'analytics-smoke.jsonl');
+    try {
+      analytics.init(probe);
+      analytics.add({ seconds: 60, words: 100, model: 'whisper-large-v3-turbo', formatModel: 'llama-3.1-8b-instant' });
+      const one = analytics.list();
+      analytics.clear();
+      return one.length === 1 && one[0].words === 100 && one[0].cost > 0 && analytics.list().length === 0;
+    } catch {
+      return false;
+    } finally {
+      analytics.init();
+    }
+  })();
+  checks.analyticsCost = Math.abs(analytics.estimateCost(3600, 0, 'whisper-large-v3-turbo', null) - 0.04) < 1e-9
+    && analytics.estimateCost(3600, 0, 'some-local-model', null) === 0;
   // Expansions: whole-phrase, word-boundary, case-insensitive, disabled
   // entries skipped, punctuation-adjacent triggers still match, and partial
   // words never match. Privacy half: the formatter prompt must not contain
@@ -543,7 +572,7 @@ async function runSmoke() {
     'iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals',
     'injectHelper', 'injectChain', 'overlayLoaded', 'correctionDiff',
     'correctionApply', 'settingsRenderer', 'onboardDismiss', 'keyStorage', 'formatPrompt', 'structurePrompt',
-    'expansionApply', 'expansionPrivacy',
+    'expansionApply', 'expansionPrivacy', 'analyticsEvents', 'analyticsCost',
     IS_MAC ? 'macTrayTemplate' : 'sendKeysEscape',
   ];
   const ok = required.every((k) => checks[k] === true);
@@ -570,6 +599,7 @@ if (!gotLock && !SMOKE) {
     });
     const s = settings.init();
     history.init();
+    analytics.init();
     createTray();
     createOverlay();
     registerIpc();

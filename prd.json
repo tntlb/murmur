@@ -303,7 +303,7 @@
       ],
       "priority": 3,
       "passes": false,
-      "notes": ""
+      "notes": "Built 2026-07-19. Required analyticsEvents smoke check (write, read, clear against a probe file so real usage data is untouched) and analyticsCost (turbo at exactly $0.04/hr, unknown local models at $0). Rates verified against groq.com/pricing the same day. Chart is hand-drawn canvas, no dependencies. Events append from handleAudio only when analyticsEnabled. Needs Labroi to dictate a few times and confirm the tab fills in with sane numbers."
     },
     {
       "id": "US-020",

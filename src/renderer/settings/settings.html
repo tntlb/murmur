@@ -20,6 +20,7 @@
         <button class="nav-item" data-tab="voice">Voice &amp; model</button>
         <button class="nav-item" data-tab="dictionary">Dictionary</button>
         <button class="nav-item" data-tab="history">History</button>
+        <button class="nav-item" data-tab="analytics">Analytics</button>
         <button class="nav-item" data-tab="about">About</button>
       </nav>
       <div class="side-foot">
@@ -334,6 +335,60 @@
         </div>
         <div id="historyList" class="history-list"></div>
         <div class="empty" id="historyEmpty">No dictations yet. Hold your key and say something.</div>
+      </section>
+
+      <!-- ============================================== Analytics -->
+      <section class="panel" data-panel="analytics">
+        <div class="eyebrow mono">LOCAL ONLY</div>
+        <h1>Analytics</h1>
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Range</div>
+            <div class="row-desc">Computed on this machine from your local usage log. Nothing is uploaded.</div>
+          </div>
+          <div class="row-ctl">
+            <select id="anaRange">
+              <option value="7">Last 7 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="90">Last 90 days</option>
+              <option value="0">All time</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="about-grid ana-grid">
+          <div class="about-card"><div class="mono about-label">MINUTES DICTATED</div><div class="ana-big" id="anaMinutes">0</div></div>
+          <div class="about-card"><div class="mono about-label">WORDS</div><div class="ana-big" id="anaWords">0</div></div>
+          <div class="about-card"><div class="mono about-label">AVG WPM</div><div class="ana-big" id="anaWpm">0</div></div>
+          <div class="about-card"><div class="mono about-label">EST. COST</div><div class="ana-big" id="anaCost">$0.00</div></div>
+          <div class="about-card"><div class="mono about-label">TIME SAVED VS TYPING</div><div class="ana-big" id="anaSaved">0 min</div></div>
+          <div class="about-card"><div class="mono about-label">DICTATIONS</div><div class="ana-big" id="anaCount">0</div></div>
+        </div>
+
+        <div class="eyebrow mono subhead">MINUTES PER DAY</div>
+        <canvas id="anaChart" class="ana-chart" width="820" height="180"></canvas>
+        <div class="empty" id="anaEmpty">No dictations in this range yet.</div>
+
+        <div class="row subhead">
+          <div class="row-text">
+            <div class="row-title">Track usage</div>
+            <div class="row-desc">Appends one line per dictation to a local log: duration, word count, model, estimated cost. Never any transcript text.</div>
+          </div>
+          <div class="row-ctl">
+            <button class="btn subtle" id="anaClear">Clear data</button>
+            <label class="switch"><input type="checkbox" id="analyticsEnabled" /><span></span></label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Your typing speed</div>
+            <div class="row-desc">Baseline for the time-saved math. Average typing is about 40 words per minute.</div>
+          </div>
+          <div class="row-ctl">
+            <input type="number" id="baselineWpm" min="10" max="200" step="5" class="num-input" />
+          </div>
+        </div>
       </section>
 
       <!-- ============================================== About -->

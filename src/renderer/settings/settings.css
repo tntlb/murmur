@@ -371,6 +371,20 @@ select { cursor: pointer; }
 .exp-input-row #expTrigger { flex: 0 0 220px; }
 .exp-off .corr-from, .exp-off .corr-to { opacity: 0.4; }
 
+/* ---------------------------------------------------------------- analytics */
+
+.ana-grid { grid-template-columns: repeat(3, 1fr); margin-top: 18px; }
+.ana-big { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.ana-chart {
+  width: 100%;
+  height: 180px;
+  margin-top: 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.num-input { width: 90px; }
+
 .corr-row {
   display: flex;
   align-items: center;

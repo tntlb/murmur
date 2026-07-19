@@ -77,6 +77,8 @@ Three layers keep names, brands, and jargon spelled right, and save you retyping
 
 **History**: your last 200 dictations, local only, with Fix, Copy, Delete, Clear all, and an off switch.
 
+**Analytics**: minutes dictated, words, average WPM, estimated API cost, and time saved versus your typing speed, computed on this machine from a local log (duration, word count, model, cost per dictation, never transcript text). Range picker, a minutes-per-day chart, a baseline typing speed setting, an off switch, and Clear data.
+
 ## Costs, and how to run it free
 
 | Option | Cost | Notes |

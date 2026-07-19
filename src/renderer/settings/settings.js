@@ -51,6 +51,8 @@ function render() {
   $('formatLevel').value = S.formatLevel;
   $('language').value = S.language;
   $('historyEnabled').checked = S.historyEnabled;
+  $('analyticsEnabled').checked = S.analyticsEnabled;
+  $('baselineWpm').value = S.baselineWpm;
   renderChips();
   renderExpansions();
   renderCorrections();
@@ -75,6 +77,7 @@ function gotoTab(tab) {
   document.querySelectorAll('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.dataset.panel === tab));
   if (tab === 'history') refreshHistory();
+  if (tab === 'analytics') refreshAnalytics();
   if (tab === 'voice') { populateMics(); populateModels(true); }
 }
 
@@ -92,6 +95,8 @@ bindCheck('sounds', 'sounds');
 bindCheck('launchAtLogin', 'launchAtLogin');
 bindCheck('smartFormat', 'smartFormat');
 bindCheck('historyEnabled', 'historyEnabled');
+bindCheck('analyticsEnabled', 'analyticsEnabled');
+bindValue('baselineWpm', 'baselineWpm', (v) => Math.min(200, Math.max(10, Number(v) || 40)));
 bindValue('insertMethod', 'insertMethod');
 bindValue('formatStyle', 'formatStyle');
 bindValue('formatLevel', 'formatLevel');
@@ -566,6 +571,69 @@ $('obDone').addEventListener('click', async () => {
   }
   await save({ onboarded: true });
   $('onboard').hidden = true;
+});
+
+// ---------------------------------------------------------------- analytics
+
+async function refreshAnalytics() {
+  const events = await window.murmur.analyticsList();
+  const days = Number($('anaRange').value);
+  const cutoff = days > 0 ? Date.now() - days * 86400000 : 0;
+  const inRange = events.filter((e) => e.ts >= cutoff);
+
+  const seconds = inRange.reduce((a, e) => a + (e.seconds || 0), 0);
+  const words = inRange.reduce((a, e) => a + (e.words || 0), 0);
+  const cost = inRange.reduce((a, e) => a + (e.cost || 0), 0);
+  const minutes = seconds / 60;
+  const wpm = minutes > 0 ? words / minutes : 0;
+  const savedMin = Math.max(0, words / Math.max(10, S.baselineWpm) - minutes);
+
+  $('anaMinutes').textContent = minutes >= 100 ? Math.round(minutes) : minutes.toFixed(1);
+  $('anaWords').textContent = words.toLocaleString();
+  $('anaWpm').textContent = Math.round(wpm);
+  $('anaCost').textContent = cost < 0.005 && cost > 0 ? '<$0.01' : `$${cost.toFixed(2)}`;
+  $('anaSaved').textContent = savedMin >= 90 ? `${(savedMin / 60).toFixed(1)} hr` : `${Math.round(savedMin)} min`;
+  $('anaCount').textContent = inRange.length.toLocaleString();
+  $('anaEmpty').hidden = inRange.length > 0;
+  drawAnaChart(inRange, days || 90);
+}
+
+// Minutes-per-day bars, drawn by hand: no chart library, night studio quiet.
+function drawAnaChart(events, days) {
+  const canvas = $('anaChart');
+  const ctx = canvas.getContext('2d');
+  const css = getComputedStyle(document.documentElement);
+  const W = canvas.width, H = canvas.height, pad = 24;
+  ctx.clearRect(0, 0, W, H);
+  const shown = Math.min(days, 90);
+  const perDay = new Array(shown).fill(0);
+  const dayMs = 86400000;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  for (const e of events) {
+    const idx = shown - 1 - Math.floor((today.getTime() + dayMs - e.ts) / dayMs);
+    if (idx >= 0 && idx < shown) perDay[idx] += (e.seconds || 0) / 60;
+  }
+  const max = Math.max(1, ...perDay);
+  const bw = (W - pad * 2) / shown;
+  ctx.fillStyle = css.getPropertyValue('--muted').trim() || '#8D8A94';
+  for (let i = 0; i < shown; i++) {
+    const h = (perDay[i] / max) * (H - pad * 2);
+    if (h > 0) ctx.fillRect(pad + i * bw + 1, H - pad - h, Math.max(1, bw - 2), h);
+  }
+  ctx.strokeStyle = css.getPropertyValue('--hairline').trim() || '#2A2830';
+  ctx.beginPath();
+  ctx.moveTo(pad, H - pad + 0.5);
+  ctx.lineTo(W - pad, H - pad + 0.5);
+  ctx.stroke();
+  ctx.fillStyle = css.getPropertyValue('--faint').trim() || '#5C5964';
+  ctx.font = '10px monospace';
+  ctx.fillText(`${max.toFixed(1)} min peak`, pad, pad - 8);
+}
+
+$('anaRange').addEventListener('change', refreshAnalytics);
+$('anaClear').addEventListener('click', async () => {
+  await window.murmur.analyticsClear();
+  refreshAnalytics();
 });
 
 // ---------------------------------------------------------------- platform

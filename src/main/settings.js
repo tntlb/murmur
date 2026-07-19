@@ -34,6 +34,8 @@ const DEFAULTS = {
   restoreClipboard: true,
   // behavior
   historyEnabled: true,
+  analyticsEnabled: true,
+  baselineWpm: 40, // typing speed the time-saved math compares against
   sounds: true,
   launchAtLogin: false,
   maxSeconds: 300,
