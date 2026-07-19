@@ -70,15 +70,19 @@ function available() {
   return !!load();
 }
 
+// uiohook names the left-side modifiers without a suffix (Ctrl, Alt, Shift,
+// Meta) and the right side with one (CtrlRight, ...). Meta is Cmd on macOS
+// and Win on Windows; Alt is Option on macOS.
+const MAC = process.platform === 'darwin';
 const LABEL_OVERRIDES = {
+  Ctrl: 'Left Ctrl',
   CtrlRight: 'Right Ctrl',
-  CtrlLeft: 'Left Ctrl',
+  Shift: 'Left Shift',
   ShiftRight: 'Right Shift',
-  ShiftLeft: 'Left Shift',
-  AltRight: 'Right Alt',
-  AltLeft: 'Left Alt',
-  MetaRight: 'Right Win',
-  MetaLeft: 'Left Win',
+  Alt: MAC ? 'Left Option' : 'Left Alt',
+  AltRight: MAC ? 'Right Option' : 'Right Alt',
+  Meta: MAC ? 'Left Cmd' : 'Left Win',
+  MetaRight: MAC ? 'Right Cmd' : 'Right Win',
   CapsLock: 'Caps Lock',
   Backquote: '`',
 };

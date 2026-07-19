@@ -4,8 +4,10 @@ const path = require('path');
 const fs = require('fs');
 const {
   app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain,
-  screen, nativeImage, shell, session,
+  screen, nativeImage, shell, session, systemPreferences,
 } = require('electron');
+
+const IS_MAC = process.platform === 'darwin';
 
 const settings = require('./settings');
 const history = require('./history');
@@ -236,9 +238,25 @@ function applyHotkeys() {
 
 // ---------------------------------------------------------------- tray
 
+// macOS menu bar wants a 16pt image with a 2x representation for retina.
+function macTrayImage(base) {
+  const img = nativeImage.createEmpty();
+  img.addRepresentation({ scaleFactor: 1, buffer: fs.readFileSync(path.join(ASSETS, `${base}-16.png`)) });
+  img.addRepresentation({ scaleFactor: 2, buffer: fs.readFileSync(path.join(ASSETS, `${base}-32.png`)) });
+  return img;
+}
+
 function createTray() {
-  trayIdle = nativeImage.createFromPath(path.join(ASSETS, 'tray-idle.png'));
-  trayRec = nativeImage.createFromPath(path.join(ASSETS, 'tray-rec.png'));
+  if (IS_MAC) {
+    // Idle is a Template image so macOS recolors it for light and dark menu
+    // bars. Recording stays amber and non-template: live color, live state.
+    trayIdle = macTrayImage('tray-idle-mac');
+    trayIdle.setTemplateImage(true);
+    trayRec = macTrayImage('tray-rec-mac');
+  } else {
+    trayIdle = nativeImage.createFromPath(path.join(ASSETS, 'tray-idle.png'));
+    trayRec = nativeImage.createFromPath(path.join(ASSETS, 'tray-rec.png'));
+  }
   tray = new Tray(trayIdle);
   tray.setToolTip('Murmur, push to talk dictation');
   const menu = Menu.buildFromTemplate([
@@ -272,15 +290,46 @@ function registerIpc() {
       version: app.getVersion(),
       holdAvailable: hotkeys.available(),
       userDataPath: app.getPath('userData'),
+      platform: process.platform,
     },
   }));
+
+  // macOS permission plumbing. Insertion needs Accessibility, hold-to-talk
+  // needs Input Monitoring (no API to query it; the capture timeout is the
+  // tell), and the mic prompt should come from us, not a surprise mid-take.
+  ipcMain.handle('perm:status', () => {
+    if (!IS_MAC) return { platform: process.platform };
+    return {
+      platform: 'darwin',
+      accessibility: systemPreferences.isTrustedAccessibilityClient(false),
+      microphone: systemPreferences.getMediaAccessStatus('microphone'),
+    };
+  });
+  ipcMain.handle('perm:requestAccessibility', () => {
+    if (!IS_MAC) return true;
+    return systemPreferences.isTrustedAccessibilityClient(true);
+  });
+  ipcMain.handle('perm:requestMic', () => {
+    if (!IS_MAC) return true;
+    return systemPreferences.askForMediaAccess('microphone');
+  });
+  ipcMain.on('perm:openPane', (e, pane) => {
+    const panes = {
+      accessibility: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',
+      inputMonitoring: 'x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent',
+      microphone: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
+    };
+    if (IS_MAC && panes[pane]) shell.openExternal(panes[pane]);
+  });
 
   ipcMain.handle('settings:set', (e, partial) => {
     const before = settings.get();
     const next = settings.set(partial);
     let error = null;
     if ('launchAtLogin' in partial) {
-      app.setLoginItemSettings({ openAtLogin: next.launchAtLogin });
+      // macOS only accepts login items from packaged apps; a dev build
+      // logs an OS error, so skip it there.
+      if (!IS_MAC || app.isPackaged) app.setLoginItemSettings({ openAtLogin: next.launchAtLogin });
     }
     const needsRebind = ['toggleShortcut', 'holdEnabled', 'holdKeycodes'].some((k) => k in partial);
     if (needsRebind && !SMOKE) {
@@ -342,6 +391,7 @@ function registerIpc() {
 async function runSmoke() {
   const checks = {};
   const iconFiles = ['tray-idle.png', 'tray-rec.png', 'icon-256.png'];
+  if (IS_MAC) iconFiles.push('tray-idle-mac-16.png', 'tray-idle-mac-32.png', 'tray-rec-mac-16.png', 'tray-rec-mac-32.png');
   checks.iconsExist = iconFiles.every((f) => fs.existsSync(path.join(ASSETS, f)));
   checks.iconsDecode = iconFiles.every((f) => !nativeImage.createFromPath(path.join(ASSETS, f)).isEmpty());
   checks.settingsFile = fs.existsSync(path.join(app.getPath('userData'), 'settings.json'));
@@ -363,7 +413,15 @@ async function runSmoke() {
       setTimeout(() => resolve(false), 15000);
     } else resolve(true);
   });
-  checks.sendKeysEscape = inject.escapeSendKeys('a+b{c}\n') === 'a{+}b{{}c{}}{ENTER}';
+  if (IS_MAC) {
+    // Template idle icon is what makes the tray legible on light menu bars.
+    checks.macTrayTemplate = !!(trayIdle && trayIdle.isTemplateImage()) && !!(trayRec && !trayRec.isTemplateImage());
+    // Informational: Accessibility is granted per-machine by the user, so it
+    // must never gate the smoke result, but it is worth surfacing.
+    checks.accessibilityGranted = systemPreferences.isTrustedAccessibilityClient(false);
+  } else {
+    checks.sendKeysEscape = inject.escapeSendKeys('a+b{c}\n') === 'a{+}b{{}c{}}{ENTER}';
+  }
   checks.correctionDiff = JSON.stringify(corrections.diffPairs('open cloud code now', 'open Claude Code now'))
     === JSON.stringify([{ from: 'cloud code', to: 'Claude Code' }]);
   checks.correctionApply = corrections.applyCorrections('i use cloud code daily', [{ from: 'cloud code', to: 'Claude Code' }])
@@ -418,7 +476,12 @@ async function runSmoke() {
     });
     setTimeout(() => resolve(false), 15000);
   });
-  const required = ['iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals', 'injectHelper', 'injectChain', 'overlayLoaded', 'sendKeysEscape', 'correctionDiff', 'correctionApply', 'settingsRenderer', 'onboardDismiss'];
+  const required = [
+    'iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals',
+    'injectHelper', 'injectChain', 'overlayLoaded', 'correctionDiff',
+    'correctionApply', 'settingsRenderer', 'onboardDismiss',
+    IS_MAC ? 'macTrayTemplate' : 'sendKeysEscape',
+  ];
   const ok = required.every((k) => checks[k] === true);
   console.log('SMOKE_RESULT ' + JSON.stringify({ ok, checks }));
   inject.dispose();
@@ -436,6 +499,8 @@ if (!gotLock && !SMOKE) {
 
   app.whenReady().then(async () => {
     app.setAppUserModelId('com.labroi.murmur');
+    // Tray app on macOS too: no Dock icon, no Cmd-Tab entry.
+    if (IS_MAC && app.dock) app.dock.hide();
     session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => {
       cb(permission === 'media');
     });
@@ -449,7 +514,7 @@ if (!gotLock && !SMOKE) {
       return;
     }
     applyHotkeys();
-    app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
+    if (!IS_MAC || app.isPackaged) app.setLoginItemSettings({ openAtLogin: s.launchAtLogin });
     if (!s.onboarded) openSettings();
   });
 

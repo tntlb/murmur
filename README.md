@@ -1,12 +1,12 @@
 # Murmur
 
-Push-to-talk dictation for Windows. Hold a key in any app, speak, release, and clean formatted text lands at your cursor. It is a from-scratch Windows answer to Wispr Flow, built to share: clone it, install, paste a free API key, and you are dictating in under five minutes.
+Push-to-talk dictation for Windows and macOS. Hold a key in any app, speak, release, and clean formatted text lands at your cursor. It is a from-scratch answer to Wispr Flow, built to share: clone it, install, paste a free API key, and you are dictating in under five minutes.
 
-Runs on Windows 10/11 today. A macOS port is planned in this same repo; until it lands, everything below is Windows.
+Runs on Windows 10/11 and macOS. Keyboard defaults differ per platform (Right Ctrl to hold on Windows, Right Cmd on macOS); everything else works the same.
 
 ## What it does
 
-- **Hold to talk**: hold Right Ctrl (rebindable), speak, release to insert. There is also a toggle shortcut (Ctrl + Shift + Space) for long dictations.
+- **Hold to talk**: hold Right Ctrl on Windows or Right Cmd on macOS (rebindable), speak, release to insert. There is also a toggle shortcut (Ctrl + Shift + Space) for long dictations.
 - **Works everywhere**: Slack, Gmail, Docs, your IDE, anything with a text cursor. Focus never leaves the app you are typing in.
 - **Live overlay**: a small floating meter shows your real waveform, a timer, and the result (word count or a readable error), then gets out of the way.
 - **Smart formatting**: a fast LLM strips filler words, fixes punctuation and casing, and honors spoken commands like "new paragraph". It fails open: if formatting hiccups, you still get the raw transcript.
@@ -19,7 +19,7 @@ Runs on Windows 10/11 today. A macOS port is planned in this same repo; until it
 
 Prerequisites: [Node.js LTS](https://nodejs.org) and a microphone.
 
-```powershell
+```
 git clone <this repo>
 cd murmur
 npm install
@@ -38,17 +38,26 @@ The key is stored only on your machine, in `%APPDATA%\murmur\settings.json`, and
 
 ## Using it
 
-| Action | Default |
-|---|---|
-| Hold to talk | Hold **Right Ctrl**, release to insert |
-| Toggle recording | **Ctrl + Shift + Space** |
-| Cancel while recording | **Esc** |
-| Fix last dictation | Tray icon menu |
-| Settings / History | Tray icon menu |
+| Action | Windows | macOS |
+|---|---|---|
+| Hold to talk | Hold **Right Ctrl**, release to insert | Hold **Right Cmd**, release to insert |
+| Toggle recording | **Ctrl + Shift + Space** | **Ctrl + Shift + Space** |
+| Cancel while recording | **Esc** | **Esc** |
+| Fix last dictation | Tray icon menu | Menu bar icon menu |
+| Settings / History | Tray icon menu | Menu bar icon menu |
 
 Both keys are rebindable in Settings, General. The hold key can be a single key or a chord: click the keycap, then press one key or hold a combo like Ctrl + Shift.
 
-The tray icon (white waveform bars, amber while recording) lives at the bottom-right of the taskbar next to the clock. Windows 11 hides it behind the **^** chevron by default; drag it out to pin it.
+The tray icon (white waveform bars, amber while recording) lives at the bottom-right of the taskbar next to the clock. Windows 11 hides it behind the **^** chevron by default; drag it out to pin it. On macOS the same waveform bars live in the menu bar at the top-right, adapting to light and dark menu bars, amber while recording.
+
+## macOS permissions
+
+Murmur needs two grants on macOS, both one-time, both explained in Settings, Voice & model:
+
+- **Accessibility** (System Settings, Privacy & Security, Accessibility): lets Murmur press Cmd+V to insert text. Without it, dictation transcribes but nothing lands at your cursor.
+- **Input Monitoring** (System Settings, Privacy & Security, Input Monitoring): lets the hold key work while other apps have focus. Without it, the toggle shortcut still works. If pressing the keycap in Settings, General times out, this is the missing grant; relaunch Murmur after enabling it.
+
+The microphone prompt appears on its own the first time you dictate.
 
 ## Teach it your words
 
@@ -103,9 +112,15 @@ Settings, Voice & model has dropdowns for both models, listing whatever your end
 
 **SmartScreen warning on the portable .exe**: expected for unsigned internal tools. Click "More info", then "Run anyway", or run from source instead.
 
+**macOS: transcription works but nothing inserts**: grant Accessibility (System Settings, Privacy & Security, Accessibility, turn Murmur on). The first paste may also show a one-time "Murmur wants to control System Events" prompt; allow it.
+
+**macOS: hold key does nothing**: grant Input Monitoring (System Settings, Privacy & Security, Input Monitoring), then relaunch Murmur. The toggle shortcut works without it.
+
+**macOS: "Murmur is damaged" or "unidentified developer" on the dmg**: expected for unsigned internal tools. Right-click the app, Open, Open again, or run from source instead.
+
 ## For coworkers without Node
 
-Someone on the team can run `npm run dist` and hand you `release/Murmur-<version>-portable.exe`. Double-click it, no install, no admin rights.
+Someone on the team can run `npm run dist` and hand you `release/Murmur-<version>-portable.exe` on Windows, or the `release/Murmur-<version>.dmg` on macOS. Double-click it, no install, no admin rights.
 
 ## For developers
 
@@ -117,13 +132,13 @@ scripts/        gen-icons.js writes every icon from code (no binary assets)
 prd.json        the product spec: stories with acceptance criteria
 ```
 
-- `npm run smoke` boots every subsystem headlessly and prints `SMOKE_RESULT` JSON.
-- `npm run dist` builds a portable .exe and an NSIS installer into `release/`.
+- `npm run smoke` boots every subsystem headlessly and prints `SMOKE_RESULT` JSON, with platform-specific checks on each OS.
+- `npm run dist` builds for the current platform into `release/`: portable .exe + NSIS installer on Windows, dmg + zip on macOS (`dist:win` and `dist:mac` force one).
 - Development follows `prd.json`: each story has acceptance criteria and a `passes` flag. Do not mark a story passing until every criterion is verified.
 
 ## Architecture in one paragraph
 
-An Electron tray app. The main process owns hotkeys (Electron `globalShortcut` for the toggle, `uiohook-napi` keydown/keyup for hold-to-talk), a transparent click-through overlay window, and a state machine (idle, listening, processing). The overlay renderer owns the microphone: MediaRecorder captures webm/opus while an AnalyserNode drives the waveform. Audio goes to `{baseUrl}/audio/transcriptions` (Groq Whisper by default), optionally through `{baseUrl}/chat/completions` for cleanup, then text is inserted by a persistent PowerShell SendKeys helper via clipboard swap + Ctrl+V, and the clipboard is restored. No native build tools are needed anywhere: the only native module ships prebuilt binaries.
+An Electron tray app. The main process owns hotkeys (Electron `globalShortcut` for the toggle, `uiohook-napi` keydown/keyup for hold-to-talk), a transparent click-through overlay window, and a state machine (idle, listening, processing). The overlay renderer owns the microphone: MediaRecorder captures webm/opus while an AnalyserNode drives the waveform. Audio goes to `{baseUrl}/audio/transcriptions` (Groq Whisper by default), optionally through `{baseUrl}/chat/completions` for cleanup, then text is inserted by a persistent keystroke helper via clipboard swap + paste, and the clipboard is restored. The helper is a PowerShell SendKeys child on Windows and an osascript (JXA) child driving System Events on macOS, one platform switch in `inject.js`. No native build tools are needed anywhere: the only native module ships prebuilt binaries for both platforms.
 
 ## License
 

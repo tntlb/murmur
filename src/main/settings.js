@@ -22,8 +22,10 @@ const DEFAULTS = {
   warmMicSeconds: 8, // 0 disables; see the note in Settings for the tradeoff
   toggleShortcut: 'Control+Shift+Space',
   holdEnabled: true,
-  holdKeycodes: [3613], // uiohook VC_CONTROL_R (Right Ctrl); chords hold multiple codes
-  holdKeyLabel: 'Right Ctrl',
+  // uiohook codes; chords hold multiple. Right Cmd on Mac (3676, MetaRight),
+  // Right Ctrl on Windows (3613, CtrlRight).
+  holdKeycodes: process.platform === 'darwin' ? [3676] : [3613],
+  holdKeyLabel: process.platform === 'darwin' ? 'Right Cmd' : 'Right Ctrl',
   // insertion
   insertMethod: 'paste', // 'paste' | 'type'
   restoreClipboard: true,

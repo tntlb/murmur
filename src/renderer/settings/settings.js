@@ -275,7 +275,7 @@ async function populateMics() {
     }
     sel.value = [...sel.options].some((o) => o.value === S.micDeviceId) ? S.micDeviceId : 'default';
   } catch {
-    toast('Could not list microphones. Check Windows microphone privacy settings.');
+    toast(`Could not list microphones. Check ${META && META.platform === 'darwin' ? 'macOS' : 'Windows'} microphone privacy settings.`);
   }
 }
 
@@ -288,7 +288,7 @@ $('micTestBtn').addEventListener('click', async () => {
     const audio = S.micDeviceId !== 'default' ? { deviceId: { exact: S.micDeviceId } } : true;
     meterStream = await navigator.mediaDevices.getUserMedia({ audio });
   } catch {
-    toast('Could not open the microphone. Check Windows privacy settings.');
+    toast(`Could not open the microphone. Check ${META && META.platform === 'darwin' ? 'macOS' : 'Windows'} privacy settings.`);
     return;
   }
   $('meter').hidden = false;
@@ -502,6 +502,39 @@ $('obDone').addEventListener('click', async () => {
   $('onboard').hidden = true;
 });
 
+// ---------------------------------------------------------------- platform
+
+// The HTML is written in the Windows voice; on macOS the copy and the extra
+// permission rows swap in here.
+function applyPlatform() {
+  if (META.platform !== 'darwin') return;
+  $('launchDesc').textContent = 'Start Murmur in the menu bar when you log in.';
+  $('micDesc').textContent = 'macOS asks for microphone access the first time. Manage it in System Settings, Privacy & Security, Microphone.';
+  $('warmDesc').textContent = 'macOS takes a moment to open the microphone, so Murmur holds it open briefly after each dictation to make the next one start instantly.';
+  $('warmNote').textContent = 'Why this is a setting: while the mic is warm, the macOS mic-in-use indicator stays on even though nothing is recorded or sent. Choose Off if you want the indicator gone the instant a dictation ends; the tradeoff is a short delay before each one starts.';
+  $('aboutLede').textContent = 'Push to talk dictation. Hold a key anywhere, speak, release, and clean text lands at your cursor.';
+  $('obMicDesc').textContent = 'macOS asks the first time Murmur uses the microphone. Also grant Accessibility in System Settings, Privacy & Security, so Murmur can insert text.';
+  $('macPerms').hidden = false;
+  refreshPermStatus();
+  $('axGrantBtn').addEventListener('click', async () => {
+    await window.murmur.permRequestAccessibility();
+    setTimeout(refreshPermStatus, 800);
+  });
+  $('axOpenBtn').addEventListener('click', () => window.murmur.permOpenPane('accessibility'));
+  $('imOpenBtn').addEventListener('click', () => window.murmur.permOpenPane('inputMonitoring'));
+  // Coming back from System Settings should reflect the new grant right away.
+  window.addEventListener('focus', refreshPermStatus);
+}
+
+async function refreshPermStatus() {
+  const st = await window.murmur.permStatus();
+  const el = $('axStatus');
+  el.textContent = st.accessibility ? '· GRANTED' : '· NOT GRANTED';
+  el.classList.toggle('status-ok', !!st.accessibility);
+  el.classList.toggle('status-err', !st.accessibility);
+  $('axGrantBtn').hidden = !!st.accessibility;
+}
+
 // ---------------------------------------------------------------- misc
 
 document.querySelectorAll('.link[data-href]').forEach((el) => {
@@ -520,6 +553,7 @@ window.murmur.on('settings-changed', (settings) => {
   S = settings;
   META = meta;
   render();
+  applyPlatform();
   populateMics();
   populateModels();
   if (!S.onboarded) $('onboard').hidden = false;

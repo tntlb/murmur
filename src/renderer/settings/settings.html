@@ -95,7 +95,7 @@
         <div class="row">
           <div class="row-text">
             <div class="row-title">Launch at login</div>
-            <div class="row-desc">Start Murmur in the tray when Windows starts.</div>
+            <div class="row-desc" id="launchDesc">Start Murmur in the tray when Windows starts.</div>
           </div>
           <div class="row-ctl">
             <label class="switch"><input type="checkbox" id="launchAtLogin" /><span></span></label>
@@ -144,7 +144,7 @@
         <div class="row">
           <div class="row-text">
             <div class="row-title">Microphone</div>
-            <div class="row-desc">Windows must allow desktop apps to use the microphone.</div>
+            <div class="row-desc" id="micDesc">Windows must allow desktop apps to use the microphone.</div>
           </div>
           <div class="row-ctl grow">
             <select id="micSelect"><option value="default">System default</option></select>
@@ -153,10 +153,33 @@
         </div>
         <div class="meter" id="meter" hidden><div class="meter-fill" id="meterFill"></div></div>
 
+        <!-- macOS only: the two permissions dictation cannot work without. -->
+        <div id="macPerms" hidden>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Accessibility <span class="mono" id="axStatus"></span></div>
+              <div class="row-desc">Lets Murmur press Cmd+V to insert text. System Settings, Privacy &amp; Security, Accessibility: turn Murmur on.</div>
+            </div>
+            <div class="row-ctl">
+              <button class="btn" id="axGrantBtn">Grant</button>
+              <button class="btn" id="axOpenBtn">Open Settings</button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Input Monitoring</div>
+              <div class="row-desc">Lets the hold key work everywhere. If pressing the keycap in General times out, System Settings, Privacy &amp; Security, Input Monitoring: turn Murmur on, then relaunch.</div>
+            </div>
+            <div class="row-ctl">
+              <button class="btn" id="imOpenBtn">Open Settings</button>
+            </div>
+          </div>
+        </div>
+
         <div class="row">
           <div class="row-text">
             <div class="row-title">Keep mic warm</div>
-            <div class="row-desc">Windows takes a moment to open the microphone, so Murmur holds it open briefly after each dictation to make the next one start instantly.</div>
+            <div class="row-desc" id="warmDesc">Windows takes a moment to open the microphone, so Murmur holds it open briefly after each dictation to make the next one start instantly.</div>
           </div>
           <div class="row-ctl">
             <select id="warmMicSeconds">
@@ -167,7 +190,7 @@
             </select>
           </div>
         </div>
-        <div class="row-note">
+        <div class="row-note" id="warmNote">
           Why this is a setting: while the mic is warm, the Windows mic-in-use indicator stays lit even though nothing is recorded or sent. Choose Off if you want the indicator dark the instant a dictation ends; the tradeoff is a short delay before each one starts.
         </div>
 
@@ -279,7 +302,7 @@
       <section class="panel" data-panel="about">
         <div class="eyebrow mono">MURMUR</div>
         <h1>About</h1>
-        <p class="lede">Push to talk dictation for Windows. Hold a key anywhere, speak, release, and clean text lands at your cursor.</p>
+        <p class="lede" id="aboutLede">Push to talk dictation for Windows. Hold a key anywhere, speak, release, and clean text lands at your cursor.</p>
         <div class="about-grid">
           <div class="about-card">
             <div class="mono about-label">VERSION</div>
@@ -323,7 +346,7 @@
         </li>
         <li>
           <div class="step-title">Allow the microphone</div>
-          <div class="step-desc">Windows Settings, Privacy &amp; security, Microphone: turn on "Let desktop apps access your microphone".</div>
+          <div class="step-desc" id="obMicDesc">Windows Settings, Privacy &amp; security, Microphone: turn on "Let desktop apps access your microphone".</div>
         </li>
         <li>
           <div class="step-title">Try it</div>

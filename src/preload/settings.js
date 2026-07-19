@@ -20,4 +20,8 @@ contextBridge.exposeInMainWorld('murmur', {
   historyClear: () => ipcRenderer.invoke('history:clear'),
   openExternal: (url) => ipcRenderer.send('open-external', url),
   testDictation: () => ipcRenderer.send('dictation:test'),
+  permStatus: () => ipcRenderer.invoke('perm:status'),
+  permRequestAccessibility: () => ipcRenderer.invoke('perm:requestAccessibility'),
+  permRequestMic: () => ipcRenderer.invoke('perm:requestMic'),
+  permOpenPane: (pane) => ipcRenderer.send('perm:openPane', pane),
 });

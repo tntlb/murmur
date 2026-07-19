@@ -2,7 +2,7 @@
   "name": "murmur",
   "productName": "Murmur",
   "version": "0.1.0",
-  "description": "Push to talk dictation for Windows. Speak anywhere, Murmur types it.",
+  "description": "Push to talk dictation for Windows and macOS. Speak anywhere, Murmur types it.",
   "main": "src/main/main.js",
   "author": "Labroi Walton",
   "license": "MIT",
@@ -11,7 +11,9 @@
     "smoke": "electron . --smoke",
     "icons": "node scripts/gen-icons.js",
     "postinstall": "node scripts/gen-icons.js",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac"
   },
   "dependencies": {
     "uiohook-napi": "^1.5.5"
@@ -38,6 +40,20 @@
         "nsis"
       ],
       "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Murmur records your voice while you dictate and sends it only to the transcription API you configured.",
+        "NSAppleEventsUsageDescription": "Murmur presses Cmd+V through System Events to insert your dictated text where your cursor is.",
+        "LSUIElement": true
+      }
     },
     "nsis": {
       "oneClick": true,

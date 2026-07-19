@@ -7,6 +7,13 @@
 // System.Windows.Forms), so there is no native module and no per-insert
 // process spawn latency.
 
+// The platform switch: macOS gets the same protocol from a persistent
+// osascript helper (inject-mac.js); everything below is Windows only.
+if (process.platform === 'darwin') {
+  module.exports = require('./inject-mac');
+  return;
+}
+
 const { spawn } = require('child_process');
 const { clipboard } = require('electron');
 

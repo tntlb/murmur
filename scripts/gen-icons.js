@@ -116,6 +116,7 @@ function drawBars(c, cx, cy, unit, color) {
 const INK = [23, 22, 27, 255];        // panel ink
 const AMBER = [240, 164, 75, 255];    // signal amber
 const WHITE = [236, 233, 228, 235];   // warm off-white for tray
+const BLACK = [0, 0, 0, 255];         // macOS Template images: black + alpha only
 
 function trayIcon(size, color) {
   const c = makeCanvas(size, size);
@@ -168,10 +169,18 @@ fs.mkdirSync(BUILD, { recursive: true });
 const files = {
   'tray-idle.png': encodePng(trayIcon(32, WHITE)),
   'tray-rec.png': encodePng(trayIcon(32, AMBER)),
+  // macOS menu bar variants at 1x and 2x. Idle is a Template image (black,
+  // alpha only) so the OS recolors it for light and dark menu bars; the
+  // recording state stays amber and non-template, live color for a live state.
+  'tray-idle-mac-16.png': encodePng(trayIcon(16, BLACK)),
+  'tray-idle-mac-32.png': encodePng(trayIcon(32, BLACK)),
+  'tray-rec-mac-16.png': encodePng(trayIcon(16, AMBER)),
+  'tray-rec-mac-32.png': encodePng(trayIcon(32, AMBER)),
   'icon-16.png': encodePng(appIcon(16)),
   'icon-32.png': encodePng(appIcon(32)),
   'icon-48.png': encodePng(appIcon(48)),
   'icon-256.png': encodePng(appIcon(256)),
+  'icon-512.png': encodePng(appIcon(512)),
 };
 
 for (const [name, buf] of Object.entries(files)) {
@@ -188,4 +197,7 @@ fs.writeFileSync(
   ])
 );
 
-console.log('icons written to assets/generated and build/icon.ico');
+// electron-builder converts a 512px build/icon.png to .icns for the dmg/zip.
+fs.writeFileSync(path.join(BUILD, 'icon.png'), files['icon-512.png']);
+
+console.log('icons written to assets/generated, build/icon.ico, and build/icon.png');

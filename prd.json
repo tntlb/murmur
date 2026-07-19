@@ -241,7 +241,7 @@
       ],
       "priority": 1,
       "passes": false,
-      "notes": ""
+      "notes": "Built 2026-07-19 on Labroi's Mac. Machine-verified: npm run smoke green on macOS (injectHelper and injectChain hit the real osascript JXA helper; macTrayTemplate confirms template idle + amber non-template rec), uiohook darwin-arm64 prebuild loads, Right Cmd default with Cmd labels, 8s live launch clean, dmg and zip built with NSMicrophoneUsageDescription, NSAppleEventsUsageDescription, and LSUIElement confirmed in the packaged Info.plist. Helper protocol prototyped standalone first: first reply 84ms including osascript boot, later replies single-digit ms. Awaiting Labroi's live loop to flip: grant Accessibility, dictate into a real app on both paste and type paths, hold Right Cmd with Input Monitoring granted, Esc cancel, and one launch from the dmg."
     },
     {
       "id": "US-016",
