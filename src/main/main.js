@@ -446,6 +446,20 @@ async function runSmoke() {
   }
   checks.correctionApply = corrections.applyCorrections('i use cloud code daily', [{ from: 'cloud code', to: 'Claude Code' }])
     === 'i use Claude Code daily';
+  // Formatter level and style must map to distinct prompt rules: None keeps
+  // exact words and never strips filler, High rewrites, Medium resolves
+  // self-corrections, and vibe-coding adds the developer rule.
+  checks.formatPrompt = (() => {
+    const p = (formatLevel, formatStyle) => transcribe.buildFormatPrompt({ formatLevel, formatStyle });
+    return p('none', 'conversation').includes('exactly as spoken')
+      && !p('none', 'conversation').includes('Remove filler words')
+      && p('high', 'conversation').includes('polished, professional')
+      && p('medium', 'conversation').includes('final intent')
+      && !p('soft', 'conversation').includes('final intent')
+      && p('medium', 'vibe-coding').includes('developer')
+      && !p('medium', 'conversation').includes('developer')
+      && p('bogus', 'bogus') === p('medium', 'conversation');
+  })();
   // Boot the settings renderer hidden and make sure it wires up cleanly.
   checks.settingsRenderer = await new Promise((resolve) => {
     const win = new BrowserWindow({
@@ -499,7 +513,7 @@ async function runSmoke() {
   const required = [
     'iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals',
     'injectHelper', 'injectChain', 'overlayLoaded', 'correctionDiff',
-    'correctionApply', 'settingsRenderer', 'onboardDismiss', 'keyStorage',
+    'correctionApply', 'settingsRenderer', 'onboardDismiss', 'keyStorage', 'formatPrompt',
     IS_MAC ? 'macTrayTemplate' : 'sendKeysEscape',
   ];
   const ok = required.every((k) => checks[k] === true);

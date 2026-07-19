@@ -258,7 +258,7 @@
       ],
       "priority": 2,
       "passes": false,
-      "notes": ""
+      "notes": "Built 2026-07-19. Required formatPrompt smoke check verifies the mapping: None keeps exact words and never strips filler, High rewrites, Medium resolves self-corrections while Soft does not, vibe-coding adds the developer rule, and unknown values fall back to Medium Conversation. Fail-open path unchanged from US-009. Settings UI renders clean (settingsRenderer green with the new selects). Needs Labroi's key for the live half: dictate the same take at None vs High and confirm exact-words vs polished output, and one self-correction ('Monday, actually Tuesday') resolving to Tuesday at Medium."
     },
     {
       "id": "US-017",

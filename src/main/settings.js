@@ -15,6 +15,8 @@ const DEFAULTS = {
   // formatting
   smartFormat: true,
   formatModel: 'llama-3.1-8b-instant',
+  formatStyle: 'conversation', // 'conversation' | 'vibe-coding'
+  formatLevel: 'medium', // 'none' | 'structure' | 'soft' | 'medium' | 'high'
   dictionary: [],
   corrections: [], // learned {from, to, count, ts} pairs from History edits
   // input

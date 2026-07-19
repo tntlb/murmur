@@ -47,6 +47,8 @@ function render() {
   if ($('model').options.length) $('model').value = S.model;
   if ($('formatModel').options.length) $('formatModel').value = S.formatModel;
   $('smartFormat').checked = S.smartFormat;
+  $('formatStyle').value = S.formatStyle;
+  $('formatLevel').value = S.formatLevel;
   $('language').value = S.language;
   $('historyEnabled').checked = S.historyEnabled;
   renderChips();
@@ -90,6 +92,8 @@ bindCheck('launchAtLogin', 'launchAtLogin');
 bindCheck('smartFormat', 'smartFormat');
 bindCheck('historyEnabled', 'historyEnabled');
 bindValue('insertMethod', 'insertMethod');
+bindValue('formatStyle', 'formatStyle');
+bindValue('formatLevel', 'formatLevel');
 bindValue('maxSeconds', 'maxSeconds', Number);
 bindValue('warmMicSeconds', 'warmMicSeconds', Number);
 bindValue('language', 'language');
