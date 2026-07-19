@@ -61,10 +61,11 @@ The microphone prompt appears on its own the first time you dictate.
 
 ## Teach it your words
 
-Two layers keep names, brands, and jargon spelled right:
+Three layers keep names, brands, and jargon spelled right, and save you retyping:
 
 - **Dictionary** (Settings, Dictionary): add terms like your company or product names. They are hinted to Whisper and enforced by the formatter.
 - **Learned corrections**: when a dictation comes out wrong, tray, **Fix last dictation**, correct the text, save. That exact fix applies to every future dictation automatically. Fix the same thing twice and the term joins your dictionary on its own. Learned pairs are listed in the Dictionary tab, each deletable.
+- **Text expansions** (Settings, Dictionary): say a trigger phrase like "my email" and the literal text you configured is inserted instead. Expansions run last, entirely on your machine, so the values are never sent to any API, safe for addresses and sign-offs.
 
 ## Every setting, briefly
 
@@ -72,7 +73,7 @@ Two layers keep names, brands, and jargon spelled right:
 
 **Voice & model**: API key with a Test button; microphone picker with a live level check; Keep mic warm (holds the mic open briefly after a dictation so the next one starts instantly; the mic-in-use indicator stays lit for that window, so it's a setting and can be Off); transcription model dropdown with prices inline; Smart formatting toggle with a style (Conversation, or Vibe coding to protect technical terms while dictating about code), a level (None keeps your exact words, Structure, Soft, Medium, High rewrites into polished prose), and its model dropdown; language pin; Base URL under Advanced for local or alternate endpoints.
 
-**Dictionary**: your terms plus everything Murmur has learned from your fixes.
+**Dictionary**: your terms, your text expansions (trigger phrase to literal value, applied after all API calls so values stay on this machine), and everything Murmur has learned from your fixes.
 
 **History**: your last 200 dictations, local only, with Fix, Copy, Delete, Clear all, and an off switch.
 

@@ -288,7 +288,7 @@
       ],
       "priority": 3,
       "passes": false,
-      "notes": ""
+      "notes": "Built 2026-07-19. Required expansionApply smoke check covers case-insensitive whole-phrase matching, punctuation-adjacent triggers, partial-word non-matches, and disabled entries; expansionPrivacy proves the formatter prompt never contains expansion values. Applied as the final pipeline step in handleAudio, after transcription, corrections, and formatting, so it works with Smart formatting off by construction. Needs one live loop from Labroi: add an expansion, dictate the trigger, see the value land."
     },
     {
       "id": "US-019",

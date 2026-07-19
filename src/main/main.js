@@ -15,6 +15,7 @@ const transcribe = require('./transcribe');
 const inject = require('./inject');
 const hotkeys = require('./hotkeys');
 const corrections = require('./corrections');
+const expansions = require('./expansions');
 
 const SMOKE = process.argv.includes('--smoke');
 const ASSETS = path.join(__dirname, '..', '..', 'assets', 'generated');
@@ -187,6 +188,8 @@ async function handleAudio(arrayBuffer, meta) {
     if (!text) throw new Error('No speech detected');
     text = corrections.applyCorrections(text, s.corrections);
     if (s.smartFormat) text = await transcribe.smartFormat(text, s);
+    // Last step on purpose: expansion values must never reach any API.
+    text = expansions.applyExpansions(text, s.expansions);
     if (gen !== recGen) return; // cancelled while transcribing
     await inject.insert(text, s);
     const words = text.trim().split(/\s+/).filter(Boolean).length;
@@ -446,6 +449,24 @@ async function runSmoke() {
   }
   checks.correctionApply = corrections.applyCorrections('i use cloud code daily', [{ from: 'cloud code', to: 'Claude Code' }])
     === 'i use Claude Code daily';
+  // Expansions: whole-phrase, word-boundary, case-insensitive, disabled
+  // entries skipped, punctuation-adjacent triggers still match, and partial
+  // words never match. Privacy half: the formatter prompt must not contain
+  // expansion values even when expansions are present in settings.
+  checks.expansionApply = (() => {
+    const list = [
+      { trigger: 'my email', value: 'lb@example.com', enabled: true },
+      { trigger: 'sign off', value: 'Best,\nLB', enabled: false },
+    ];
+    return expansions.applyExpansions('send it to My Email, thanks', list) === 'send it to lb@example.com, thanks'
+      && expansions.applyExpansions('use my emailing habit', list) === 'use my emailing habit'
+      && expansions.applyExpansions('ok sign off now', list) === 'ok sign off now'
+      && expansions.applyExpansions('', list) === '';
+  })();
+  checks.expansionPrivacy = !transcribe.buildFormatPrompt({
+    formatLevel: 'medium', formatStyle: 'conversation',
+    expansions: [{ trigger: 'my email', value: 'lb@example.com', enabled: true }],
+  }).includes('lb@example.com');
   // Formatter level and style must map to distinct prompt rules: None keeps
   // exact words and never strips filler, High rewrites, Medium resolves
   // self-corrections, and vibe-coding adds the developer rule.
@@ -522,6 +543,7 @@ async function runSmoke() {
     'iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals',
     'injectHelper', 'injectChain', 'overlayLoaded', 'correctionDiff',
     'correctionApply', 'settingsRenderer', 'onboardDismiss', 'keyStorage', 'formatPrompt', 'structurePrompt',
+    'expansionApply', 'expansionPrivacy',
     IS_MAC ? 'macTrayTemplate' : 'sendKeysEscape',
   ];
   const ok = required.every((k) => checks[k] === true);

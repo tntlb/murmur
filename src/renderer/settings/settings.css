@@ -367,6 +367,10 @@ select { cursor: pointer; }
 
 .subhead { margin-top: 34px; }
 
+.exp-input-row { display: flex; gap: 8px; }
+.exp-input-row #expTrigger { flex: 0 0 220px; }
+.exp-off .corr-from, .exp-off .corr-to { opacity: 0.4; }
+
 .corr-row {
   display: flex;
   align-items: center;

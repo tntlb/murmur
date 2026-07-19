@@ -19,6 +19,7 @@ const DEFAULTS = {
   formatLevel: 'medium', // 'none' | 'structure' | 'soft' | 'medium' | 'high'
   dictionary: [],
   corrections: [], // learned {from, to, count, ts} pairs from History edits
+  expansions: [], // {trigger, value, enabled} applied after all API calls; values never leave the machine
   // input
   micDeviceId: 'default',
   warmMicSeconds: 8, // 0 disables; see the note in Settings for the tradeoff

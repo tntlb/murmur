@@ -52,6 +52,7 @@ function render() {
   $('language').value = S.language;
   $('historyEnabled').checked = S.historyEnabled;
   renderChips();
+  renderExpansions();
   renderCorrections();
 
   $('verLine').textContent = `v${META.version}`;
@@ -357,6 +358,67 @@ $('dictInput').addEventListener('keydown', (e) => {
   }
   save({ dictionary: [...S.dictionary, word] }).then(render);
   e.target.value = '';
+});
+
+function renderExpansions() {
+  const wrap = $('expList');
+  wrap.replaceChildren();
+  const list = S.expansions || [];
+  $('expEmpty').hidden = list.length > 0;
+  list.forEach((exp, i) => {
+    const row = document.createElement('div');
+    row.className = 'corr-row' + (exp.enabled === false ? ' exp-off' : '');
+    const from = document.createElement('span');
+    from.className = 'corr-from';
+    from.textContent = `"${exp.trigger}"`;
+    const arrow = document.createElement('span');
+    arrow.className = 'corr-arrow';
+    arrow.textContent = '→';
+    const to = document.createElement('span');
+    to.className = 'corr-to';
+    to.textContent = exp.value;
+    to.title = exp.value;
+    const onOff = document.createElement('label');
+    onOff.className = 'switch';
+    onOff.style.marginLeft = 'auto';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = exp.enabled !== false;
+    cb.addEventListener('change', () => {
+      const next = S.expansions.slice();
+      next[i] = { ...next[i], enabled: cb.checked };
+      save({ expansions: next }).then(renderExpansions);
+    });
+    onOff.append(cb, document.createElement('span'));
+    const del = document.createElement('button');
+    del.className = 'btn subtle';
+    del.textContent = '✕';
+    del.title = 'Delete this expansion';
+    del.addEventListener('click', () => {
+      save({ expansions: S.expansions.filter((_, j) => j !== i) }).then(renderExpansions);
+    });
+    row.append(from, arrow, to, onOff, del);
+    wrap.appendChild(row);
+  });
+}
+
+$('expTrigger').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $('expValue').focus();
+});
+
+$('expValue').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const trigger = $('expTrigger').value.trim();
+  const value = $('expValue').value.trim();
+  if (!trigger || !value) { toast('An expansion needs both a trigger and a text.'); return; }
+  if ((S.expansions || []).some((x) => x.trigger.toLowerCase() === trigger.toLowerCase())) {
+    toast('That trigger already exists. Delete it first to change it.');
+    return;
+  }
+  save({ expansions: [...(S.expansions || []), { trigger, value, enabled: true }] }).then(renderExpansions);
+  $('expTrigger').value = '';
+  $('expValue').value = '';
+  $('expTrigger').focus();
 });
 
 function renderCorrections() {
