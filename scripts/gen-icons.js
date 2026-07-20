@@ -137,14 +137,18 @@ function appIcon(size) {
 
 // At list sizes (System Settings, Finder small views) five thin bars on ink
 // collapse into a dark blob, so 16 and 32 px get three bolder bars instead.
+// A warm light rim and a slightly lifted tile keep the mark visible on dark
+// backgrounds too; a near-black tile vanishes into a dark-mode list row
+// (found by Labroi in the System Settings privacy list).
 function smallAppIcon(size) {
   const c = makeCanvas(size, size);
   const pad = Math.max(1, Math.round(size * 0.03));
-  fillRoundedRect(c, pad, pad, size - pad * 2, size - pad * 2, size * 0.24, INK);
+  fillRoundedRect(c, pad, pad, size - pad * 2, size - pad * 2, size * 0.26, [236, 233, 228, 110]);
+  fillRoundedRect(c, pad + 1, pad + 1, size - (pad + 1) * 2, size - (pad + 1) * 2, size * 0.22, [38, 36, 44, 255]);
   const ratios = [0.55, 1.0, 0.45];
-  const unit = size * 0.56;
-  const bw = Math.max(3, Math.round(size * 0.13));
-  const gap = Math.max(2, Math.round(bw * 0.7));
+  const unit = size * 0.5;
+  const bw = Math.max(2, Math.round(size * 0.11));
+  const gap = Math.max(2, Math.round(bw * 0.9));
   const totalW = ratios.length * bw + (ratios.length - 1) * gap;
   let x = size / 2 - totalW / 2;
   for (const r of ratios) {
