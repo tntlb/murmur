@@ -1,6 +1,6 @@
 # Murmur Roadmap
 
-> Generated from prd.json (16/26 stories verified). Do not edit by hand: change prd.json, then run `npm run roadmap`.
+> Generated from prd.json (15/26 stories verified). Do not edit by hand: change prd.json, then run `npm run roadmap`.
 
 ## Done and verified
 
@@ -12,7 +12,6 @@
 - [x] **US-006** Groq transcription provider
 - [x] **US-007** Text insertion at the cursor
 - [x] **US-008** Hold-to-talk
-- [x] **US-009** Smart formatting and custom dictionary
 - [x] **US-010** Local history
 - [x] **US-011** First-run onboarding
 - [x] **US-012** Polish: sounds, autostart, resilience
@@ -25,6 +24,7 @@
 
 Each of these works in the required smoke checks; the remaining step is a human loop noted in prd.json.
 
+- [ ] **US-009** Smart formatting and custom dictionary
 - [ ] **US-014** Correction learning loop
 - [ ] **US-015** macOS platform support
 - [ ] **US-016** Formatting styles and levels

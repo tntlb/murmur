@@ -147,8 +147,8 @@
         "Formatted output preserves meaning; nothing is added"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Verified 2026-07-17 with the real key: 'um so uh what time is it you know' formatted to 'What time is it?', fillers removed, punctuation fixed, and the question was not answered. llama-3.1-8b-instant confirmed live on Groq. Fail-open guards (error, empty, or 3x-length output falls back to raw) implemented; dictionary feeds both Whisper prompt and formatter. Flag reconciled 2026-07-19: passes lagged the recorded verification."
+      "passes": false,
+      "notes": "Verified 2026-07-17 with the real key: 'um so uh what time is it you know' formatted to 'What time is it?', fillers removed, punctuation fixed, and the question was not answered. llama-3.1-8b-instant confirmed live on Groq. Fail-open guards (error, empty, or 3x-length output falls back to raw) implemented; dictionary feeds both Whisper prompt and formatter. Flag reconciled 2026-07-19: passes lagged the recorded verification. REOPENED 2026-07-20: live chat-leak artifact. The formatter's conversational preamble was inserted ahead of the actual dictation: 'Before sending the cleaned text, I will confirm it with you to ensure it meets the requirements. Please provide the dictated speech you'd like me to clean up, and I'll review it according to the rules and then confirm the output with you before sending it.' The model echoed its instructions instead of only cleaning, violating 'nothing is added' and the fail-open constraint in CLAUDE.md. The existing guards miss chatty output of normal length. Fix needs a chat-leak detector that falls back to the raw transcript: reject outputs with assistant framing or instruction-echo phrases (e.g. 'cleaned text', 'dictated speech', 'I will', 'Please provide') that do not appear in the raw transcript, or low token overlap with the raw transcript. Add a smoke check with a canned chatty response."
     },
     {
       "id": "US-010",
