@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const {
   app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain,
-  screen, nativeImage, shell, session, systemPreferences, Notification,
+  screen, nativeImage, shell, session, systemPreferences, Notification, clipboard,
 } = require('electron');
 
 const IS_MAC = process.platform === 'darwin';
@@ -409,6 +409,13 @@ function registerIpc() {
   ipcMain.handle('analytics:list', () => analytics.list());
   ipcMain.handle('analytics:clear', () => { analytics.clear(); return []; });
   ipcMain.on('recaps:test', () => recaps.fire('weekly', recapDeps()));
+  // Copy goes through the main-process clipboard: the renderer-side
+  // navigator.clipboard API silently rejects when Chromium decides the
+  // document lacks focus or permission, which broke History's Copy button.
+  ipcMain.handle('clipboard:copy', (e, text) => {
+    clipboard.writeText(String(text == null ? '' : text));
+    return true;
+  });
   ipcMain.handle('history:list', () => history.list());
   ipcMain.handle('history:update', (e, id, newText) => {
     const prev = history.update(id, newText);
@@ -633,9 +640,15 @@ async function runSmoke() {
     });
     setTimeout(() => resolve(false), 15000);
   });
+  {
+    const prevClip = clipboard.readText();
+    clipboard.writeText('murmur-smoke-clip');
+    checks.clipboardMain = clipboard.readText() === 'murmur-smoke-clip';
+    clipboard.writeText(prevClip);
+  }
   const required = [
     'iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals',
-    'injectHelper', 'injectChain', 'overlayLoaded', 'correctionDiff',
+    'injectHelper', 'injectChain', 'overlayLoaded', 'correctionDiff', 'clipboardMain',
     'correctionApply', 'settingsRenderer', 'onboardDismiss', 'keyStorage', 'formatPrompt', 'structurePrompt',
     'expansionApply', 'expansionPrivacy', 'analyticsEvents', 'analyticsCost', 'recapSchedule', 'numberPrompt',
     IS_MAC ? 'macTrayTemplate' : 'sendKeysEscape',

@@ -491,8 +491,8 @@ async function refreshHistory() {
     copy.className = 'btn';
     copy.textContent = 'Copy';
     copy.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(item.text);
-      copy.textContent = 'Copied';
+      const ok = await window.murmur.copyText(item.text).catch(() => false);
+      copy.textContent = ok ? 'Copied' : 'Failed';
       setTimeout(() => { copy.textContent = 'Copy'; }, 1200);
     });
     const del = document.createElement('button');
