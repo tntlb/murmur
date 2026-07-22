@@ -1,6 +1,6 @@
 # Murmur Roadmap
 
-> Generated from prd.json (17/26 stories verified). Do not edit by hand: change prd.json, then run `npm run roadmap`.
+> Generated from prd.json (18/27 stories verified). Do not edit by hand: change prd.json, then run `npm run roadmap`.
 
 ## Done and verified
 
@@ -21,6 +21,7 @@
 - [x] **US-021** API key encrypted at rest
 - [x] **US-022** Instant-start mic
 - [x] **US-026** Number formatting option
+- [x] **US-027** Warm mic survives sleep and resume
 
 ## Built, awaiting live verification
 
