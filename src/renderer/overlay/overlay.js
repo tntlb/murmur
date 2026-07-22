@@ -41,6 +41,13 @@ let timerInterval = 0;
 let mode = 'idle'; // idle | live | processing
 let processT = 0;
 let soundsOn = true;
+// Loudest frame of the current take, from the same analyser that drives the
+// waveform. Silence hallucination guard: Whisper invents words ("You're
+// welcome.") when handed a take that never rose above the noise floor, so
+// main refuses to transcribe one. Sample count rides along so a throttled
+// renderer that never sampled can never veto real speech.
+let peakRms = 0;
+let rmsSamples = 0;
 
 // ---------------------------------------------------------------- audio cues
 
@@ -88,6 +95,8 @@ function draw() {
       sum += v * v;
     }
     const rms = Math.sqrt(sum / data.length);
+    if (rms > peakRms) peakRms = rms;
+    rmsSamples += 1;
     bars.push(Math.min(1, rms * 3.2));
     if (bars.length > BAR_COUNT) bars.shift();
   } else if (mode === 'processing') {
@@ -232,6 +241,8 @@ async function startCapture({ deviceId, sounds, warmSeconds, platform: plat }) {
   warmStreamMs = ws < 0 ? -1 : ws * 1000;
   bars = [];
   chunks = [];
+  peakRms = 0;
+  rmsSamples = 0;
   clearTimeout(releaseTimer);
   const gen = ++captureGen;
 
@@ -324,7 +335,7 @@ function stopCapture(discard) {
       mode = 'processing';
       const blob = new Blob(chunks, { type: 'audio/webm' });
       const buf = await blob.arrayBuffer();
-      window.murmur.recData(buf, { ms });
+      window.murmur.recData(buf, { ms, peakRms, rmsSamples });
     } else {
       mode = 'idle';
       stopDrawing();

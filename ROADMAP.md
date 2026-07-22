@@ -1,6 +1,6 @@
 # Murmur Roadmap
 
-> Generated from prd.json (18/27 stories verified). Do not edit by hand: change prd.json, then run `npm run roadmap`.
+> Generated from prd.json (18/28 stories verified). Do not edit by hand: change prd.json, then run `npm run roadmap`.
 
 ## Done and verified
 
@@ -34,6 +34,7 @@ Each of these works in the required smoke checks; the remaining step is a human 
 - [ ] **US-019** Local usage analytics
 - [ ] **US-020** Recap notifications
 - [ ] **US-023** Overlay fly-in animation
+- [ ] **US-028** Silence never inserts text
 
 ## Planned
 

@@ -425,6 +425,22 @@
       "priority": 2,
       "passes": true,
       "notes": "Root-caused 2026-07-22 from a live failure: machine slept overnight with Murmur launched at 1:09 AM on Always warm; morning dictations recorded silence (history shows a 24.5 second take transcribing to '.' and the Whisper silence hallucination 'www.feyy.tv') while a fresh getUserMedia in the Settings mic test worked fine. Cause: suspend tears down the capture under the warm stream but the MediaStreamTrack stays readyState live, so streamIsWarm kept reusing a dead stream forever. Fix built 2026-07-22: muted-track check in streamIsWarm, powerMonitor resume and unlock-screen send mic-rewarm to the overlay, devicechange and sticky-mute recycling, all gated on idle. Verified live by Labroi 2026-07-22 on Windows: full sleep and resume cycle with Always warm, first dictation after wake transcribed the spoken words. Smoke green. devicechange and sticky-mute paths are review-verified; same recycle helper as the live-verified resume path. Mac side reported to have the same symptom; the fix is platform-agnostic (powerMonitor resume and unlock-screen fire on macOS too), needs a rebuild there to take effect."
+    },
+    {
+      "id": "US-028",
+      "title": "Silence never inserts text",
+      "description": "As a user, if I trigger a dictation and say nothing, Murmur tells me no speech was detected; it never inserts hallucinated text like You're welcome. or a lone period.",
+      "acceptanceCriteria": [
+        "The overlay tracks the take's peak analyser level (the same signal driving the waveform) and sends it with the audio",
+        "A take whose peak level never left the noise floor is refused with No speech detected before any API call",
+        "The veto only applies when the overlay actually sampled frames, so a throttled renderer can never eat real speech",
+        "A transcript with no letters or digits raises No speech detected instead of being inserted",
+        "Quiet but real speech still transcribes normally, verified live",
+        "A silent take inserts nothing and shows No speech detected, verified live"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Driven by live failures 2026-07-22: silence hallucination chain hit three ways in one day (a lone '.' inserted, the formatter chatting about a silence artifact, and Whisper inventing 'You're welcome.' from a silent take, which no text-level guard can safely catch because Thank you and You're welcome are legitimate dictations). Built 2026-07-22: overlay accumulates peakRms and rmsSamples per take from the existing analyser and ships them in the rec-data meta; handleAudio refuses a take with rmsSamples >= 5 and peakRms < 0.01 (speech peaks sit well above 0.05 with autoGainControl on) before spending an API call; punctuation-only transcripts also refuse. Complements the US-009 chat guard, whose overlap floor now applies to any non-empty output so a two-word chat reply fails open too. Needs Labroi live: a silent take must show No speech detected, and normal plus deliberately quiet speech must still land."
     }
   ]
 }

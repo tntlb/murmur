@@ -221,6 +221,13 @@ async function handleAudio(arrayBuffer, meta) {
   try {
     const raw = Buffer.from(arrayBuffer);
     if (raw.length < 1200) throw new Error('No speech detected');
+    // Whisper hallucinates plausible words ("You're welcome.") on silence, so
+    // a take whose loudest analyser frame never left the noise floor is
+    // refused before it can reach the API. Speech peaks land well above 0.05
+    // with autoGainControl on; only vetoes when the overlay actually sampled.
+    if (meta && typeof meta.peakRms === 'number' && meta.rmsSamples >= 5 && meta.peakRms < 0.01) {
+      throw new Error('No speech detected');
+    }
     let text = await transcribe.transcribe(raw, s);
     // Whisper answers silence with a lone "." or similar; a transcript with
     // no letters or digits is silence, not text to insert.
@@ -583,6 +590,7 @@ async function runSmoke() {
     return g('.', 'There is no text to clean up. Please provide the dictated speech to be converted into written text.') === '.'
       && g('so um the budget is fine', 'Before sending the cleaned text, I will confirm it with you to ensure it meets the requirements. Please provide the dictated speech.') === 'so um the budget is fine'
       && g('Thank you.', "You're welcome! Let me know if you need anything else.") === 'Thank you.'
+      && g('Thank you.', "You're welcome.") === 'Thank you.'
       && g('um, send it to bob', 'Send it to Bob.') === 'Send it to Bob.'
       && g('period', '.') === '.'
       && g('two', '2') === '2'

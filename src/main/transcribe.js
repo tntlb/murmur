@@ -163,10 +163,13 @@ function guardFormatOutput(input, output) {
   // that word (or its punctuation or digit form); more is invention.
   if (inWords.length <= 1) return outWords.length <= inWords.length + 2 ? out : inp;
   // A cleanup reuses the transcript's own words. An output that mostly
-  // does not is a reply about the text, not the text.
+  // does not is a reply about the text, not the text. The tradeoff is that
+  // an all-new legit rewrite of a tiny take (digits mode turning "forty
+  // two" into "42") also fails open to the raw words; losing a conversion
+  // beats inserting a chat reply.
   const inSet = new Set(inWords);
   const kept = outWords.filter((w) => inSet.has(w)).length;
-  if (outWords.length >= 3 && kept / outWords.length < 0.34) return inp;
+  if (outWords.length && kept / outWords.length < 0.34) return inp;
   return out;
 }
 
