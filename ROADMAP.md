@@ -1,6 +1,6 @@
 # Murmur Roadmap
 
-> Generated from prd.json (18/28 stories verified). Do not edit by hand: change prd.json, then run `npm run roadmap`.
+> Generated from prd.json (20/28 stories verified). Do not edit by hand: change prd.json, then run `npm run roadmap`.
 
 ## Done and verified
 
@@ -12,6 +12,7 @@
 - [x] **US-006** Groq transcription provider
 - [x] **US-007** Text insertion at the cursor
 - [x] **US-008** Hold-to-talk
+- [x] **US-009** Smart formatting and custom dictionary
 - [x] **US-010** Local history
 - [x] **US-011** First-run onboarding
 - [x] **US-012** Polish: sounds, autostart, resilience
@@ -22,19 +23,18 @@
 - [x] **US-022** Instant-start mic
 - [x] **US-026** Number formatting option
 - [x] **US-027** Warm mic survives sleep and resume
+- [x] **US-028** Silence never inserts text
 
 ## Built, awaiting live verification
 
 Each of these works in the required smoke checks; the remaining step is a human loop noted in prd.json.
 
-- [ ] **US-009** Smart formatting and custom dictionary
 - [ ] **US-015** macOS platform support
 - [ ] **US-016** Formatting styles and levels
 - [ ] **US-017** Auto structure formatting
 - [ ] **US-019** Local usage analytics
 - [ ] **US-020** Recap notifications
 - [ ] **US-023** Overlay fly-in animation
-- [ ] **US-028** Silence never inserts text
 
 ## Planned
 
