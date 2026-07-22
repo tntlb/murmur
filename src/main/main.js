@@ -222,7 +222,9 @@ async function handleAudio(arrayBuffer, meta) {
     const raw = Buffer.from(arrayBuffer);
     if (raw.length < 1200) throw new Error('No speech detected');
     let text = await transcribe.transcribe(raw, s);
-    if (!text) throw new Error('No speech detected');
+    // Whisper answers silence with a lone "." or similar; a transcript with
+    // no letters or digits is silence, not text to insert.
+    if (!text || !/[\p{L}\p{N}]/u.test(text)) throw new Error('No speech detected');
     text = corrections.applyCorrections(text, s.corrections);
     if (s.smartFormat) text = await transcribe.smartFormat(text, s);
     // Last step on purpose: expansion values must never reach any API.
@@ -573,6 +575,20 @@ async function runSmoke() {
       && !p('medium', 'conversation').includes('developer')
       && p('bogus', 'bogus') === p('medium', 'conversation');
   })();
+  // US-009 chat guard: canned chatty replies (both live-observed artifacts)
+  // must fail open to the raw transcript; legitimate cleanups pass through,
+  // including one-word commands, digit conversion, and unanswered questions.
+  checks.formatChatGuard = (() => {
+    const g = transcribe.guardFormatOutput;
+    return g('.', 'There is no text to clean up. Please provide the dictated speech to be converted into written text.') === '.'
+      && g('so um the budget is fine', 'Before sending the cleaned text, I will confirm it with you to ensure it meets the requirements. Please provide the dictated speech.') === 'so um the budget is fine'
+      && g('Thank you.', "You're welcome! Let me know if you need anything else.") === 'Thank you.'
+      && g('um, send it to bob', 'Send it to Bob.') === 'Send it to Bob.'
+      && g('period', '.') === '.'
+      && g('two', '2') === '2'
+      && g('what time is it', 'What time is it?') === 'What time is it?'
+      && g('some text', '') === 'some text';
+  })();
   // Numbers: digits mode adds the digit rule, words mode the word rule,
   // auto adds neither, unknown values fall back to auto.
   checks.numberPrompt = (() => {
@@ -650,7 +666,7 @@ async function runSmoke() {
     'iconsExist', 'iconsDecode', 'settingsFile', 'tray', 'fetchGlobals',
     'injectHelper', 'injectChain', 'overlayLoaded', 'correctionDiff', 'clipboardMain',
     'correctionApply', 'settingsRenderer', 'onboardDismiss', 'keyStorage', 'formatPrompt', 'structurePrompt',
-    'expansionApply', 'expansionPrivacy', 'analyticsEvents', 'analyticsCost', 'recapSchedule', 'numberPrompt',
+    'expansionApply', 'expansionPrivacy', 'analyticsEvents', 'analyticsCost', 'recapSchedule', 'numberPrompt', 'formatChatGuard',
     IS_MAC ? 'macTrayTemplate' : 'sendKeysEscape',
   ];
   const ok = required.every((k) => checks[k] === true);

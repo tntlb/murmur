@@ -132,7 +132,48 @@ function buildFormatPrompt(s) {
   ].join('\n');
 }
 
+// US-009 chat guard. The formatter must transform the transcript, never
+// converse with it (observed live twice: an instruction-echo preamble on
+// 2026-07-20, and "There is no text to clean up..." replacing a silence
+// artifact on 2026-07-22). Two tells, both failing open to the raw
+// transcript: output containing meta-phrases a cleanup could never add,
+// and output whose words are mostly not the transcript's words.
+const CHAT_TELLS = [
+  'no text to clean', 'nothing to clean', 'text to clean up',
+  'dictated speech', 'cleaned text', 'cleaned-up text', 'cleaned version',
+  'provide the text', 'as an ai', 'i am an ai', "i'm an ai", 'language model',
+];
+
+function wordsOf(text) {
+  return String(text || '').toLowerCase().match(/[\p{L}\p{N}']+/gu) || [];
+}
+
+function guardFormatOutput(input, output) {
+  const inp = String(input || '').trim();
+  const out = String(output || '').trim();
+  if (!out) return inp;
+  // Wildly longer output means the model started talking.
+  if (out.length > inp.length * 3 + 200) return inp;
+  const lowerIn = inp.toLowerCase();
+  const lowerOut = out.toLowerCase();
+  if (CHAT_TELLS.some((t) => lowerOut.includes(t) && !lowerIn.includes(t))) return inp;
+  const inWords = wordsOf(inp);
+  const outWords = wordsOf(out);
+  // A transcript of at most one word gives a cleanup nothing to say beyond
+  // that word (or its punctuation or digit form); more is invention.
+  if (inWords.length <= 1) return outWords.length <= inWords.length + 2 ? out : inp;
+  // A cleanup reuses the transcript's own words. An output that mostly
+  // does not is a reply about the text, not the text.
+  const inSet = new Set(inWords);
+  const kept = outWords.filter((w) => inSet.has(w)).length;
+  if (outWords.length >= 3 && kept / outWords.length < 0.34) return inp;
+  return out;
+}
+
 async function smartFormat(text, s) {
+  // Punctuation-only transcripts (a silence artifact) go straight through
+  // instead of inviting the model to chat about them.
+  if (!wordsOf(text).length) return text;
   try {
     let system = buildFormatPrompt(s);
     if (Array.isArray(s.dictionary) && s.dictionary.length) {
@@ -164,10 +205,8 @@ async function smartFormat(text, s) {
     const out = json.choices && json.choices[0] && json.choices[0].message
       ? String(json.choices[0].message.content || '').trim()
       : '';
-    // Fail open: a formatter that returns nothing, or something wildly longer
-    // than the input (a sign it started chatting), must never eat a dictation.
-    if (!out || out.length > text.length * 3 + 200) return text;
-    return out;
+    // Fail open: chatty, empty, or runaway output must never eat a dictation.
+    return guardFormatOutput(text, out);
   } catch {
     return text;
   }
@@ -196,4 +235,4 @@ async function testConnection(s) {
   }
 }
 
-module.exports = { transcribe, smartFormat, testConnection, listModels, buildFormatPrompt };
+module.exports = { transcribe, smartFormat, testConnection, listModels, buildFormatPrompt, guardFormatOutput };
