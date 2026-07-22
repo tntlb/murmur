@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const {
   app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain,
-  screen, nativeImage, shell, session, systemPreferences, Notification, clipboard,
+  screen, nativeImage, shell, session, systemPreferences, Notification, clipboard, powerMonitor,
 } = require('electron');
 
 const IS_MAC = process.platform === 'darwin';
@@ -681,6 +681,10 @@ if (!gotLock && !SMOKE) {
     createTray();
     createOverlay();
     overlayWin.webContents.once('did-finish-load', broadcastWarmConfig);
+    // Sleep and the lock screen can kill the audio capture underneath a warm
+    // stream while its tracks still read live; make the overlay reopen it.
+    powerMonitor.on('resume', () => sendOverlay('mic-rewarm'));
+    powerMonitor.on('unlock-screen', () => sendOverlay('mic-rewarm'));
     settings.onChange((next, changed) => {
       if ('micDeviceId' in changed || 'warmMicSeconds' in changed) broadcastWarmConfig();
     });

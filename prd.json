@@ -409,6 +409,22 @@
       "priority": 3,
       "passes": true,
       "notes": "Requested by Labroi 2026-07-20 during live testing. Live-verified the same day: digits mode confirmed on real dictation. Words mode is machine-verified through the required numberPrompt smoke check (same prompt mechanism, symmetric rule)."
+    },
+    {
+      "id": "US-027",
+      "title": "Warm mic survives sleep and resume",
+      "description": "As a user with Keep mic warm set to Always, dictation still hears me after my machine sleeps, resumes, locks, or switches audio devices; a stale warm stream must never record silence.",
+      "acceptanceCriteria": [
+        "streamIsWarm treats a muted track as not warm, so a dictation never reuses a stream Chromium has flagged",
+        "On system resume and screen unlock, main sends mic-rewarm and the overlay releases and reopens the warm stream while idle",
+        "A devicechange event recycles the warm stream so a new or removed device is picked up",
+        "A track that stays muted longer than about 1.5 seconds while idle recycles the stream on its own",
+        "Recycling is a no-op unless the overlay is idle, so a live take is never interrupted",
+        "After a sleep and resume cycle with Always warm, the first dictation transcribes the spoken words, verified live"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Root-caused 2026-07-22 from a live failure: machine slept overnight with Murmur launched at 1:09 AM on Always warm; morning dictations recorded silence (history shows a 24.5 second take transcribing to '.' and the Whisper silence hallucination 'www.feyy.tv') while a fresh getUserMedia in the Settings mic test worked fine. Cause: suspend tears down the capture under the warm stream but the MediaStreamTrack stays readyState live, so streamIsWarm kept reusing a dead stream forever. Fix built 2026-07-22: muted-track check in streamIsWarm, powerMonitor resume and unlock-screen send mic-rewarm to the overlay, devicechange and sticky-mute recycling, all gated on idle. Needs Labroi live: with Always set, sleep and resume the machine (or leave it overnight), then dictate; the first take must contain the spoken words."
     }
   ]
 }

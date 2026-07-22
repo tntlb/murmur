@@ -189,16 +189,27 @@ async function warmStream(deviceId) {
   watchStreamEnd();
 }
 
-// Re-warm when the device disappears (unplugged headset, changed default).
+// Drop a stream that can no longer be trusted and, in Always mode, open a
+// fresh one. Sleep/resume and default-device switches can leave a track
+// readyState live while the capture underneath is dead silent (found live
+// 2026-07-22: overnight sleep, morning dictations transcribed silence), so
+// the only safe move is a full reopen.
+function recycleWarmStream(delayMs) {
+  if (mode !== 'idle') return; // a live take owns the stream right now
+  releaseStream();
+  if (alwaysWarm) setTimeout(() => warmStream(warmDeviceId), delayMs || 0);
+}
+
+// Re-warm when the device disappears (unplugged headset, changed default)
+// or the track goes mute and stays that way.
 function watchStreamEnd() {
   if (!stream) return;
   for (const t of stream.getTracks()) {
-    t.onended = () => {
-      if (alwaysWarm && mode === 'idle') {
-        releaseStream();
-        setTimeout(() => warmStream(warmDeviceId), 1000);
-      }
-    };
+    t.onended = () => recycleWarmStream(1000);
+    // Mute often flips back on its own mid-session; recycle only if it sticks.
+    t.onmute = () => setTimeout(() => {
+      if (stream && stream.getTracks().includes(t) && t.muted) recycleWarmStream(250);
+    }, 1500);
   }
 }
 
@@ -207,7 +218,7 @@ function streamIsWarm(deviceId) {
     stream &&
     lastDeviceId === (deviceId || 'default') &&
     stream.getTracks().length &&
-    stream.getTracks().every((t) => t.readyState === 'live')
+    stream.getTracks().every((t) => t.readyState === 'live' && !t.muted)
   );
 }
 
@@ -351,6 +362,12 @@ window.murmur.on('warm-config', ({ deviceId, warmSeconds, platform: plat }) => {
   if (mode !== 'idle') return; // a live take applies the new policy when it ends
   if (alwaysWarm) warmStream(warmDeviceId);
   else if (stream) scheduleStreamRelease();
+});
+// Main fires this on system resume and screen unlock: the OS may have torn
+// down the capture device under the warm stream without ending the track.
+window.murmur.on('mic-rewarm', () => recycleWarmStream(0));
+navigator.mediaDevices.addEventListener('devicechange', () => {
+  if (stream || alwaysWarm) recycleWarmStream(250);
 });
 window.murmur.on('rec-stop', () => stopCapture(false));
 window.murmur.on('rec-cancel', () => {
