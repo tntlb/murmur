@@ -41,8 +41,20 @@ Each of these works in the required smoke checks; the remaining step is a human 
 - [ ] **US-024** Signed and notarized macOS build
 - [ ] **US-025** Auto-update from GitHub Releases
 
+## iOS (prd-ios.json, 0/10 verified)
+
+- [ ] **US-101** Shared formatter spec
+- [ ] **US-102** Xcode project, app shell, and project law
+- [ ] **US-103** Transcription and formatting pipeline in Swift
+- [ ] **US-104** API key, settings, and onboarding
+- [ ] **US-105** In-app dictation
+- [ ] **US-106** Keyboard extension
+- [ ] **US-107** The bounce: record, return, insert
+- [ ] **US-108** Action Button and Siri Shortcut dictation
+- [ ] **US-109** Dictionary, corrections, and expansions on iOS
+- [ ] **US-110** TestFlight on Labroi's iPhone
+
 ## Horizon (not yet stories)
 
-- [ ] iOS app + Murmur keyboard: native Swift, keyboard extension with the containing-app mic bounce (the Wispr Flow shape), shared formatter spec extracted to shared/ first. Gets its own prd-ios.json in this repo.
 - [ ] Paid tier sold outside the Mac App Store: license keys via a merchant of record (Lemon Squeezy or Polar shortlisted, both $0 upfront). Free forever from source.
 - [ ] Marketing: repo transfer to the public-facing account, README as landing page, SEO pass, launch content.
