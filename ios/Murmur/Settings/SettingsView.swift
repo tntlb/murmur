@@ -87,6 +87,15 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink("Dictionary, corrections & expansions") {
+                        VocabularyView()
+                    }
+                    .accessibilityLabel("Open vocabulary settings")
+                } header: {
+                    Text("Vocabulary").font(NightStudio.mono(11))
+                }
+
+                Section {
                     Toggle("Keep history on this phone", isOn: $store.historyEnabled)
                         .accessibilityLabel("Keep dictation history on this phone")
                 } header: {

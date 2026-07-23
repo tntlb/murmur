@@ -165,7 +165,7 @@
       ],
       "priority": 5,
       "passes": false,
-      "notes": ""
+      "notes": "Built 2026-07-23, xcodebuild test green (10 suites). Corrections.diffPairs and learn ported from src/main/corrections.js: case-sensitive LCS word diff, phrase-level runs capped at 4 words, single-word case-only tweaks skipped, promote-on-second-fix into the dictionary, 100-pair cap, newest first. Diff semantics proven against the shared corrections.diff vectors (the same vectors the desktop sharedVectors smoke check runs); promote-on-second-fix, no-duplicate-promotion, learned-pair-reapplies, and the cap all unit-tested. SettingsStore persists dictionary, corrections, and expansions as JSON in standard defaults (never the App Group), round-trip tested, and feeds all three into the pipeline snapshot. Dictionary rides the Whisper vocabulary prompt and the formatter dictionary rule (request-body tests from US-103 cover both); expansions apply dead last with values proven absent from every request body. VocabularyView manages all three (add and delete terms, view and delete learned pairs with counts, add, toggle, delete expansions); editing a History take opens the fix sheet, Save diffs and learns. Remaining for Labroi: one taught correction reapplying on a later live dictation; flip passes then."
     },
     {
       "id": "US-110",

@@ -9,6 +9,8 @@ struct DictationView: View {
     @StateObject private var controller = DictationController()
     @State private var pressed = false
     @State private var copiedId: UUID?
+    @State private var editing: DictationRecord?
+    @State private var editText = ""
 
     private static let spec = try? FormatSpec.load()
 
@@ -38,6 +40,37 @@ struct DictationView: View {
                 .padding(.top, 26)
 
             Spacer(minLength: 0)
+        }
+        // Editing a take teaches the correction loop (US-109): the diff
+        // between what was heard and the fix becomes a learned pair.
+        .sheet(item: $editing) { record in
+            NavigationStack {
+                TextEditor(text: $editText)
+                    .scrollContentBackground(.hidden)
+                    .background(NightStudio.ink)
+                    .foregroundStyle(NightStudio.text)
+                    .padding(12)
+                    .navigationTitle("Fix this take")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") { editing = nil }
+                                .accessibilityLabel("Cancel editing")
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Save") {
+                                let fixed = editText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if !fixed.isEmpty, fixed != record.text {
+                                    store.learnCorrection(oldText: record.text, newText: fixed)
+                                    history.update(id: record.id, text: fixed)
+                                }
+                                editing = nil
+                            }
+                            .accessibilityLabel("Save the fix and learn from it")
+                        }
+                    }
+            }
+            .preferredColorScheme(.dark)
         }
     }
 
@@ -183,6 +216,15 @@ struct DictationView: View {
                     .foregroundStyle(NightStudio.text.opacity(0.4))
             }
             Spacer()
+            Button {
+                editing = item
+                editText = item.text
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 14))
+                    .foregroundStyle(NightStudio.text.opacity(0.6))
+            }
+            .accessibilityLabel("Edit this dictation and teach Murmur the fix")
             Button {
                 UIPasteboard.general.string = item.text
                 copiedId = item.id

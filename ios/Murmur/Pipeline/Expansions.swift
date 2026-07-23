@@ -5,7 +5,7 @@ import Foundation
 // and formatting, so the values never appear in any API request (hard
 // constraint, proven by unit test). Whole-phrase, word-boundary,
 // case-insensitive, matching desktop semantics.
-struct Expansion: Equatable {
+struct Expansion: Equatable, Codable {
     let trigger: String
     let value: String
     var enabled: Bool = true

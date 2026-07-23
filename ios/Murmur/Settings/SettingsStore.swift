@@ -44,6 +44,13 @@ final class SettingsStore: ObservableObject {
     @Published var maxSeconds: Int { didSet { defaults.set(maxSeconds, forKey: Keys.maxSeconds) } }
     @Published var onboarded: Bool { didSet { defaults.set(onboarded, forKey: Keys.onboarded) } }
 
+    // The vocabulary trio (US-109), stored as JSON in standard defaults,
+    // never the App Group: expansions carry literal values that must stay
+    // in the app sandbox.
+    @Published var dictionary: [String] { didSet { encode(dictionary, forKey: Keys.dictionary) } }
+    @Published var corrections: [CorrectionPair] { didSet { encode(corrections, forKey: Keys.corrections) } }
+    @Published var expansions: [Expansion] { didSet { encode(expansions, forKey: Keys.expansions) } }
+
     // The key never touches UserDefaults: reads and writes go straight to
     // the Keychain. Published mirror kept in memory for the UI only.
     @Published var apiKey: String {
@@ -65,6 +72,9 @@ final class SettingsStore: ObservableObject {
         static let historyEnabled = "murmur.historyEnabled"
         static let maxSeconds = "murmur.maxSeconds"
         static let onboarded = "murmur.onboarded"
+        static let dictionary = "murmur.dictionary"
+        static let corrections = "murmur.corrections"
+        static let expansions = "murmur.expansions"
     }
 
     init(defaults: UserDefaults = .standard, keychainAccount: String = "apiKey") {
@@ -82,7 +92,30 @@ final class SettingsStore: ObservableObject {
         historyEnabled = defaults.object(forKey: Keys.historyEnabled) as? Bool ?? fallback.historyEnabled
         maxSeconds = defaults.object(forKey: Keys.maxSeconds) as? Int ?? fallback.maxSeconds
         onboarded = defaults.bool(forKey: Keys.onboarded)
+        dictionary = Self.decode([String].self, defaults: defaults, key: Keys.dictionary) ?? []
+        corrections = Self.decode([CorrectionPair].self, defaults: defaults, key: Keys.corrections) ?? []
+        expansions = Self.decode([Expansion].self, defaults: defaults, key: Keys.expansions) ?? []
         apiKey = Keychain.get(account: keychainAccount) ?? ""
+    }
+
+    private func encode<T: Encodable>(_ value: T, forKey key: String) {
+        if let data = try? JSONEncoder().encode(value) {
+            defaults.set(data, forKey: key)
+        }
+    }
+
+    private static func decode<T: Decodable>(_ type: T.Type, defaults: UserDefaults, key: String) -> T? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
+    }
+
+    // The History edit hook: diff the fix against what was heard, keep the
+    // pairs, promote twice-fixed terms into the dictionary (US-109).
+    func learnCorrection(oldText: String, newText: String) {
+        let learned = Corrections.learn(oldText: oldText, newText: newText,
+                                        corrections: corrections, dictionary: dictionary)
+        corrections = learned.corrections
+        dictionary = learned.dictionary
     }
 
     // The settings snapshot the pipeline consumes.
@@ -99,6 +132,9 @@ final class SettingsStore: ObservableObject {
         s.numberStyle = numberStyle
         s.historyEnabled = historyEnabled
         s.maxSeconds = maxSeconds
+        s.dictionary = dictionary
+        s.corrections = corrections
+        s.expansions = expansions
         return s
     }
 }

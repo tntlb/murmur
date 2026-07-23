@@ -80,6 +80,31 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(Keychain.get(account: account))
     }
 
+    func testVocabularyRoundTrip() {
+        let store = makeStore()
+        store.dictionary = ["Murmur", "Groq"]
+        store.corrections = [CorrectionPair(from: "cloud code", to: "Claude Code", count: 2, ts: Date())]
+        store.expansions = [Expansion(trigger: "my email", value: "lb@example.com", enabled: false)]
+        let reborn = makeStore()
+        XCTAssertEqual(reborn.dictionary, ["Murmur", "Groq"])
+        XCTAssertEqual(reborn.corrections.first?.to, "Claude Code")
+        XCTAssertEqual(reborn.corrections.first?.count, 2)
+        XCTAssertEqual(reborn.expansions.first?.enabled, false)
+        // The trio rides into the pipeline snapshot.
+        let s = reborn.pipelineSettings
+        XCTAssertEqual(s.dictionary, ["Murmur", "Groq"])
+        XCTAssertEqual(s.corrections.first?.from, "cloud code")
+        XCTAssertEqual(s.expansions.first?.trigger, "my email")
+    }
+
+    func testLearnCorrectionUpdatesStore() {
+        let store = makeStore()
+        store.learnCorrection(oldText: "open cloud code", newText: "open Claude Code")
+        store.learnCorrection(oldText: "i use cloud code", newText: "i use Claude Code")
+        XCTAssertEqual(store.corrections.first?.count, 2)
+        XCTAssertTrue(store.dictionary.contains("Claude Code"), "second fix promotes into the dictionary")
+    }
+
     func testOptionListsMatchDesktop() {
         XCTAssertEqual(SettingsStore.levelOptions.map(\.value), ["none", "structure", "soft", "medium", "high"])
         XCTAssertEqual(SettingsStore.styleOptions.map(\.value), ["conversation", "vibe-coding"])

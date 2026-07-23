@@ -47,6 +47,19 @@ final class HistoryStore: ObservableObject {
         save()
     }
 
+    // A History edit keeps the record but replaces its text; the caller
+    // feeds the diff to the correction learner (US-109).
+    func update(id: UUID, text: String) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        let old = items[index]
+        items[index] = DictationRecord(id: old.id,
+                                       text: text,
+                                       words: text.split(whereSeparator: \.isWhitespace).count,
+                                       date: old.date,
+                                       model: old.model)
+        save()
+    }
+
     func clear() {
         items = []
         save()
