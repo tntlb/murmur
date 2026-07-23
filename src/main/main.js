@@ -642,7 +642,8 @@ async function runSmoke() {
         && v.corrections.apply.every((c) => corrections.applyCorrections(c.text, c.pairs) === c.expected)
         && v.expansions.cases.every((c) => expansions.applyExpansions(c.text, v.expansions.list) === c.expected)
         && v.chatGuard.every((c) => transcribe.guardFormatOutput(c.input, c.output) === c.expected)
-        && v.silenceSegments.every((c) => transcribe.extractTranscript(c.response) === c.expected);
+        && v.silenceSegments.every((c) => transcribe.extractTranscript(c.response) === c.expected)
+        && v.formatPrompt.every((c) => transcribe.buildFormatPrompt({ formatLevel: c.level, formatStyle: c.style, numberStyle: c.numbers }) === c.prompt);
     } catch {
       return false;
     }
