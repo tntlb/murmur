@@ -5,6 +5,7 @@ import SwiftUI
 // proves the murmur:// route lands here until then.
 struct ContentView: View {
     @Binding var route: MurmurRoute?
+    @State private var showSettings = false
 
     var body: some View {
         ZStack {
@@ -21,6 +22,24 @@ struct ContentView: View {
                     .textCase(.uppercase)
                     .foregroundStyle(NightStudio.text.opacity(0.55))
             }
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .foregroundStyle(NightStudio.text.opacity(0.6))
+                            .font(.system(size: 18))
+                    }
+                    .accessibilityLabel("Open settings")
+                    .padding(.trailing, 22)
+                }
+                Spacer()
+            }
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
         }
         .preferredColorScheme(.dark)
     }

@@ -46,7 +46,7 @@ Each of these works in the required smoke checks; the remaining step is a human 
 - [x] **US-101** Shared formatter spec
 - [x] **US-102** Xcode project, app shell, and project law
 - [ ] **US-103** Transcription and formatting pipeline in Swift · built, live check pending
-- [ ] **US-104** API key, settings, and onboarding
+- [ ] **US-104** API key, settings, and onboarding · built, live check pending
 - [ ] **US-105** In-app dictation
 - [ ] **US-106** Keyboard extension
 - [ ] **US-107** The bounce: record, return, insert
