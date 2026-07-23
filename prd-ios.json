@@ -38,8 +38,8 @@
         "npm run smoke green on desktop after the refactor"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Verified 2026-07-23. shared/format-spec.json now holds header, rules label, spoken commands, footer, dictionary and corrections rule templates, vocabulary prompt, all five levels, structure rules, both styles, number rules, chat-guard tells plus thresholds, and the silence no_speech_prob threshold. transcribe.js composes from the spec (buildFormatPrompt, guardFormatOutput, extractTranscript take an optional spec arg defaulting to the file). Byte-identical proven by snapshotting all 72 level x style x numbers prompt combos before the refactor and diffing after: zero mismatches. specDriven required check proves the default prompt contains strings read from the file on disk and that a mutated spec changes the output, so a regression to constants fails smoke. shared/test-vectors.json carries the correction, expansion, chat-guard, and silence-segment cases; new required sharedVectors check runs every vector through the real desktop implementations. shared/**/* added to builder files so packaged apps ship the spec. npm run smoke green: all 26 required checks true including specDriven and sharedVectors, formatPrompt, structurePrompt, numberPrompt, formatChatGuard untouched and green."
     },
     {
       "id": "US-102",

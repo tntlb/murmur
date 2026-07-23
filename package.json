@@ -32,6 +32,7 @@
     },
     "files": [
       "src/**/*",
+      "shared/**/*",
       "assets/**/*",
       "package.json"
     ],

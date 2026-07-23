@@ -1,0 +1,151 @@
+{
+  "comment": "Shared verification vectors for every platform. The desktop smoke check sharedVectors runs all of these through the real implementations; iOS unit tests consume the identical file. Add cases here so both platforms prove the same behavior.",
+  "version": 1,
+  "corrections": {
+    "diff": [
+      {
+        "name": "phrase-level mishearing comes out as one pair",
+        "old": "open cloud code now",
+        "new": "open Claude Code now",
+        "pairs": [{ "from": "cloud code", "to": "Claude Code" }]
+      },
+      {
+        "name": "single-word capitalization tweak is style, not a correction",
+        "old": "i like murmur a lot",
+        "new": "i like Murmur a lot",
+        "pairs": []
+      },
+      {
+        "name": "identical texts teach nothing",
+        "old": "nothing changed here",
+        "new": "nothing changed here",
+        "pairs": []
+      }
+    ],
+    "apply": [
+      {
+        "name": "case-insensitive whole-word apply",
+        "text": "i use cloud code daily",
+        "pairs": [{ "from": "cloud code", "to": "Claude Code" }],
+        "expected": "i use Claude Code daily"
+      },
+      {
+        "name": "partial words never match",
+        "text": "the cloudy codebase",
+        "pairs": [{ "from": "cloud code", "to": "Claude Code" }],
+        "expected": "the cloudy codebase"
+      }
+    ]
+  },
+  "expansions": {
+    "list": [
+      { "trigger": "my email", "value": "lb@example.com", "enabled": true },
+      { "trigger": "sign off", "value": "Best,\nLB", "enabled": false }
+    ],
+    "cases": [
+      {
+        "name": "case-insensitive whole phrase, punctuation-adjacent",
+        "text": "send it to My Email, thanks",
+        "expected": "send it to lb@example.com, thanks"
+      },
+      {
+        "name": "partial words never match",
+        "text": "use my emailing habit",
+        "expected": "use my emailing habit"
+      },
+      {
+        "name": "disabled entries are skipped",
+        "text": "ok sign off now",
+        "expected": "ok sign off now"
+      },
+      {
+        "name": "empty text stays empty",
+        "text": "",
+        "expected": ""
+      }
+    ]
+  },
+  "chatGuard": [
+    {
+      "name": "live-observed 2026-07-22: silence artifact invited a chat reply",
+      "input": ".",
+      "output": "There is no text to clean up. Please provide the dictated speech to be converted into written text.",
+      "expected": "."
+    },
+    {
+      "name": "live-observed 2026-07-20: instruction-echo preamble",
+      "input": "so um the budget is fine",
+      "output": "Before sending the cleaned text, I will confirm it with you to ensure it meets the requirements. Please provide the dictated speech.",
+      "expected": "so um the budget is fine"
+    },
+    {
+      "name": "chatty answer to a polite transcript",
+      "input": "Thank you.",
+      "output": "You're welcome! Let me know if you need anything else.",
+      "expected": "Thank you."
+    },
+    {
+      "name": "two-word chat reply caught by the overlap floor",
+      "input": "Thank you.",
+      "output": "You're welcome.",
+      "expected": "Thank you."
+    },
+    {
+      "name": "legitimate cleanup passes through",
+      "input": "um, send it to bob",
+      "output": "Send it to Bob.",
+      "expected": "Send it to Bob."
+    },
+    {
+      "name": "spoken punctuation command survives the one-word rule",
+      "input": "period",
+      "output": ".",
+      "expected": "."
+    },
+    {
+      "name": "digit conversion survives the one-word rule",
+      "input": "two",
+      "output": "2",
+      "expected": "2"
+    },
+    {
+      "name": "a question is formatted, never answered",
+      "input": "what time is it",
+      "output": "What time is it?",
+      "expected": "What time is it?"
+    },
+    {
+      "name": "empty output fails open to the transcript",
+      "input": "some text",
+      "output": "",
+      "expected": "some text"
+    }
+  ],
+  "silenceSegments": [
+    {
+      "name": "near-certain non-speech drops entirely",
+      "response": { "text": "Thank you.", "segments": [{ "text": " Thank you.", "no_speech_prob": 0.97 }] },
+      "expected": ""
+    },
+    {
+      "name": "mixed take keeps the real segment only",
+      "response": { "text": "Real words here. Thank you.", "segments": [{ "text": " Real words here.", "no_speech_prob": 0.02 }, { "text": " Thank you.", "no_speech_prob": 0.93 }] },
+      "expected": "Real words here."
+    },
+    {
+      "name": "whispered speech stays under the threshold and survives",
+      "response": { "text": "whispered but real", "segments": [{ "text": " whispered but real", "no_speech_prob": 0.55 }] },
+      "expected": "whispered but real"
+    },
+    {
+      "name": "endpoint without segments falls through to plain text",
+      "response": { "text": "plain endpoint" },
+      "expected": "plain endpoint"
+    },
+    {
+      "name": "segments without probabilities fail open",
+      "response": { "text": "no probs", "segments": [{ "text": " no probs" }] },
+      "expected": "no probs"
+    }
+  ]
+}

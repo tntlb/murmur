@@ -610,6 +610,43 @@ async function runSmoke() {
       && x({ text: 'plain endpoint' }) === 'plain endpoint'
       && x({ text: 'no probs', segments: [{ text: ' no probs' }] }) === 'no probs';
   })();
+  // US-101 spec wiring: the prompt must be composed from shared/format-spec.json,
+  // not constants. Proof in two halves: the default prompt contains strings read
+  // from the file on disk, and handing buildFormatPrompt a mutated spec changes
+  // the output. Together they pin the file as the source of truth.
+  checks.specDriven = (() => {
+    try {
+      const specPath = path.join(__dirname, '..', '..', 'shared', 'format-spec.json');
+      const raw = JSON.parse(fs.readFileSync(specPath, 'utf8'));
+      const dflt = transcribe.buildFormatPrompt({ formatLevel: 'high', formatStyle: 'vibe-coding', numberStyle: 'digits' });
+      const fromDisk = dflt.includes(raw.prompt.header)
+        && dflt.includes(raw.levels.high[0])
+        && dflt.includes(raw.styles['vibe-coding'][0])
+        && dflt.includes(raw.numbers.digits[0]);
+      const mutated = JSON.parse(JSON.stringify(raw));
+      mutated.levels.high[0] = '- SPEC_PROBE rewrite rule that exists only in this mutated spec.';
+      const changed = transcribe.buildFormatPrompt({ formatLevel: 'high', formatStyle: 'vibe-coding', numberStyle: 'digits' }, mutated);
+      return fromDisk && changed !== dflt && changed.includes('SPEC_PROBE');
+    } catch {
+      return false;
+    }
+  })();
+  // US-101 shared vectors: every case in shared/test-vectors.json runs through
+  // the real desktop implementations, so the file iOS unit tests consume is
+  // proven true here and cannot drift from the code.
+  checks.sharedVectors = (() => {
+    try {
+      const vecPath = path.join(__dirname, '..', '..', 'shared', 'test-vectors.json');
+      const v = JSON.parse(fs.readFileSync(vecPath, 'utf8'));
+      return v.corrections.diff.every((c) => JSON.stringify(corrections.diffPairs(c.old, c.new)) === JSON.stringify(c.pairs))
+        && v.corrections.apply.every((c) => corrections.applyCorrections(c.text, c.pairs) === c.expected)
+        && v.expansions.cases.every((c) => expansions.applyExpansions(c.text, v.expansions.list) === c.expected)
+        && v.chatGuard.every((c) => transcribe.guardFormatOutput(c.input, c.output) === c.expected)
+        && v.silenceSegments.every((c) => transcribe.extractTranscript(c.response) === c.expected);
+    } catch {
+      return false;
+    }
+  })();
   // Numbers: digits mode adds the digit rule, words mode the word rule,
   // auto adds neither, unknown values fall back to auto.
   checks.numberPrompt = (() => {
@@ -688,6 +725,7 @@ async function runSmoke() {
     'injectHelper', 'injectChain', 'overlayLoaded', 'correctionDiff', 'clipboardMain',
     'correctionApply', 'settingsRenderer', 'onboardDismiss', 'keyStorage', 'formatPrompt', 'structurePrompt',
     'expansionApply', 'expansionPrivacy', 'analyticsEvents', 'analyticsCost', 'recapSchedule', 'numberPrompt', 'formatChatGuard', 'silenceSegments',
+    'specDriven', 'sharedVectors',
     IS_MAC ? 'macTrayTemplate' : 'sendKeysEscape',
   ];
   const ok = required.every((k) => checks[k] === true);
