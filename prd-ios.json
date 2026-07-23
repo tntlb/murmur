@@ -102,7 +102,7 @@
       ],
       "priority": 3,
       "passes": false,
-      "notes": ""
+      "notes": "Built 2026-07-23, xcodebuild test green (8 suites). DictationController: hold records while held, release under 0.35s toggles a long take (decision pinned by unit test), press during a toggled take stops it; phases idle, recording, processing, done, error. DictationView: 36-bar waveform driven by the recorder's 30 Hz level meter, amber strictly while recording, result card with Copy and ShareLink, error card in red with dismiss, history list with per-item copy and delete. HistoryStore: last 200 on device in Application Support JSON, newest first, cap and delete and relaunch persistence unit-tested; history toggle added to Settings. Live-verified in the simulator with a synthesized 2s hold: LISTENING state screenshot shows amber ring, amber mark, amber status while recording real (silent) mic input; release screenshot shows recording stopped, amber gone, and the readable red error card No API key yet with dismiss. Remaining for Labroi on his iPhone: real dictation with his Groq key, copy, paste into another app; flip passes then."
     },
     {
       "id": "US-106",

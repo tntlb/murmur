@@ -87,6 +87,15 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle("Keep history on this phone", isOn: $store.historyEnabled)
+                        .accessibilityLabel("Keep dictation history on this phone")
+                } header: {
+                    Text("History").font(NightStudio.mono(11))
+                } footer: {
+                    Text("The last 200 dictations, stored only on this device. Turning this off stops new entries.")
+                }
+
+                Section {
                     LabeledContent("Base URL") {
                         TextField("https://api.groq.com/openai/v1", text: $store.baseUrl)
                             .multilineTextAlignment(.trailing)
